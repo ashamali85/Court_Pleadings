@@ -7,7 +7,10 @@ import type { Placeholders } from '@/lib/templates/types'
  * its fonts, RTL layout, header table and footer — only the {placeholders}
  * change, so the output is the same document the lawyer already uses.
  */
-export function renderDocx(templateBytes: Uint8Array, data: Placeholders): Buffer {
+export function renderDocx(
+  templateBytes: Uint8Array,
+  data: Placeholders,
+): Uint8Array<ArrayBuffer> {
   const zip = new PizZip(Buffer.from(templateBytes))
 
   const doc = new Docxtemplater(zip, {
@@ -30,5 +33,11 @@ export function renderDocx(templateBytes: Uint8Array, data: Placeholders): Buffe
     )
   }
 
-  return doc.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' })
+  // copied into a fresh ArrayBuffer: Prisma 7's Bytes field is
+  // Uint8Array<ArrayBuffer>, which a Node Buffer (ArrayBufferLike) does not satisfy
+  const generated: Buffer = doc.getZip().generate({
+    type: 'nodebuffer',
+    compression: 'DEFLATE',
+  })
+  return new Uint8Array(generated)
 }

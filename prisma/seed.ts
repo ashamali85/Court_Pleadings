@@ -16,7 +16,10 @@ const db = new PrismaClient({ adapter })
 // without redeploying; the file in templates/ is the source of truth at seed time.
 async function seedTemplates() {
   for (const template of templates) {
-    const docx = readFileSync(join(process.cwd(), 'templates', `${template.key}.docx`))
+    // fresh ArrayBuffer, so it matches Prisma's Uint8Array<ArrayBuffer> Bytes type
+    const docx = new Uint8Array(
+      readFileSync(join(process.cwd(), 'templates', `${template.key}.docx`)),
+    )
     const existing = await db.caseTemplate.findUnique({ where: { key: template.key } })
 
     if (!existing) {

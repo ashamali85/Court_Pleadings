@@ -98,7 +98,7 @@ export async function generateDocument(
   const overrides = formDataToOverrides(loaded.template, formData)
   const placeholders = loaded.template.derive(parsed.data, overrides)
 
-  let bytes: Buffer
+  let bytes: Uint8Array<ArrayBuffer>
   try {
     bytes = renderDocx(loaded.request.template.docx, placeholders)
   } catch (error) {
