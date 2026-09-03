@@ -66,7 +66,7 @@ npm run dev
 |---|---|---|
 | `DATABASE_URL` | yes | Neon **pooled** URL — used by the app at runtime |
 | `DIRECT_URL` | yes | Neon **non-pooled** URL — used by the Prisma CLI |
-| `JWT_SECRET` | yes | ≥ 32 chars. Generate it yourself: `openssl rand -base64 48` |
+| `JWT_SECRET` | yes | ≥ 32 chars. Generate it yourself: `openssl rand -base64 48`. Validated on first use, not at import, so a missing value fails the request — never the build. |
 | `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | for seeding | The lawyer's login. Without them the seed creates no accounts. |
 | `SEED_CLIENT_EMAIL` / `SEED_CLIENT_PASSWORD` | optional | A test client account |
 | `RESEND_API_KEY`, `MAIL_FROM`, `ADMIN_NOTIFY_EMAIL` | optional | Email notifications; without them the app logs and carries on |

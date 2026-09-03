@@ -13,6 +13,9 @@ export type ReviewState = {
   error?: string
   errors?: Record<string, string>
   ok?: string
+  /** set after a successful generation so the form can link straight to the file */
+  documentId?: string
+  filename?: string
 }
 
 async function loadForReview(requestId: string) {
@@ -98,9 +101,19 @@ export async function generateDocument(
   const overrides = formDataToOverrides(loaded.template, formData)
   const placeholders = loaded.template.derive(parsed.data, overrides)
 
+  // the .docx lives in CaseTemplate; an empty row means the seed never ran
+  const templateBytes = loaded.request.template?.docx
+  if (!templateBytes || templateBytes.byteLength === 0) {
+    console.error('[generate] template row missing or empty', loaded.request.templateKey)
+    return {
+      error:
+        'قالب الصحيفة غير محمّل في قاعدة البيانات. شغّل «npm run db:seed» ثم أعد المحاولة.',
+    }
+  }
+
   let bytes: Uint8Array<ArrayBuffer>
   try {
-    bytes = renderDocx(loaded.request.template.docx, placeholders)
+    bytes = renderDocx(templateBytes, placeholders)
   } catch (error) {
     console.error('[generate] render failed', error)
     return { error: error instanceof Error ? error.message : 'تعذر إنشاء المستند' }
@@ -109,7 +122,7 @@ export async function generateDocument(
   const version = loaded.request.documents.length + 1
   const filename = `${loaded.template.filenamePrefix}-${loaded.request.reference}-v${version}.docx`
 
-  await db.$transaction([
+  const [created] = await db.$transaction<[{ id: string }, unknown]>([
     db.document.create({
       data: {
         requestId,
@@ -118,6 +131,7 @@ export async function generateDocument(
         bytes,
         generatedById: admin.id,
       },
+      select: { id: true },
     }),
     db.caseRequest.update({
       where: { id: requestId },
@@ -146,15 +160,29 @@ export async function generateDocument(
 
   revalidatePath(`/admin/requests/${requestId}`)
   revalidatePath('/admin')
-  return { ok: `تم إصدار الصحيفة (نسخة ${version}).` }
+  return {
+    ok: `تم إصدار الصحيفة (نسخة ${version}).`,
+    documentId: created.id,
+    filename,
+  }
 }
 
-/** One entry point for the review form; the clicked button carries the intent. */
+/**
+ * One entry point for the review form. The intent arrives in a hidden field the
+ * buttons set on click — NOT on the submit button's own name/value, which is not
+ * reliably present in the FormData a server action receives.
+ */
 export async function submitReview(
   prev: ReviewState,
   formData: FormData,
 ): Promise<ReviewState> {
-  const intent = (formData.get('intent') ?? 'save').toString()
+  const intent = (formData.get('intent') ?? '').toString()
+
+  if (intent !== 'generate' && intent !== 'save') {
+    console.error('[review] unexpected intent value', JSON.stringify(intent))
+    return { error: 'تعذر تحديد الإجراء المطلوب. حدّث الصفحة وأعد المحاولة.' }
+  }
+
   return intent === 'generate'
     ? generateDocument(prev, formData)
     : saveReview(prev, formData)

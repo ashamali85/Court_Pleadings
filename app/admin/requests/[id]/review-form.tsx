@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useRef } from 'react'
 import { rejectRequest, submitReview, type ReviewState } from '@/app/admin/actions'
 import { Field, useFieldValues } from '@/components/fields'
 import type { SectionDef } from '@/lib/templates/types'
@@ -42,13 +42,30 @@ export default function ReviewForm({
   const { values, onChange } = useFieldValues(initialValues)
   const errors = state.errors ?? {}
 
+  // written directly to the DOM node on click, so the value is already in place
+  // when the form serialises — a state update would land one render too late
+  const intentRef = useRef<HTMLInputElement>(null)
+  const setIntent = (intent: 'save' | 'generate') => {
+    if (intentRef.current) intentRef.current.value = intent
+  }
+
   return (
     <>
       <form action={action}>
         <input type="hidden" name="requestId" value={requestId} />
+        <input type="hidden" name="intent" defaultValue="save" ref={intentRef} />
 
         {state.error ? <div className="alert error">{state.error}</div> : null}
-        {state.ok ? <div className="alert ok">{state.ok}</div> : null}
+        {state.ok ? (
+          <div className="alert ok">
+            {state.ok}{' '}
+            {state.documentId ? (
+              <a href={`/api/documents/${state.documentId}`}>
+                تحميل الملف{state.filename ? ` (${state.filename})` : ''}
+              </a>
+            ) : null}
+          </div>
+        ) : null}
 
         {sections.map((section) => (
           <div className="card" key={section.key}>
@@ -133,8 +150,7 @@ export default function ReviewForm({
             <button
               className="btn"
               type="submit"
-              name="intent"
-              value="generate"
+              onClick={() => setIntent('generate')}
               disabled={pending}
             >
               {pending ? 'جارٍ التنفيذ…' : 'إصدار الصحيفة (Word)'}
@@ -142,13 +158,25 @@ export default function ReviewForm({
             <button
               className="btn secondary"
               type="submit"
-              name="intent"
-              value="save"
+              onClick={() => setIntent('save')}
               disabled={pending}
             >
               حفظ التعديلات فقط
             </button>
           </div>
+
+          {/* repeated here: the banner at the top of a long form is easy to miss */}
+          {state.error ? (
+            <div className="alert error" style={{ marginTop: 16, marginBottom: 0 }}>
+              {state.error}
+            </div>
+          ) : null}
+          {state.ok && state.documentId ? (
+            <div className="alert ok" style={{ marginTop: 16, marginBottom: 0 }}>
+              {state.ok}{' '}
+              <a href={`/api/documents/${state.documentId}`}>تحميل الملف</a>
+            </div>
+          ) : null}
         </div>
       </form>
 
