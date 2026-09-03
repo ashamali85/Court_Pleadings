@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CLIENT
+  ADMIN
+}
+
+enum RequestStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  GENERATED
+  REJECTED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  phone        String?
+  role         Role     @default(CLIENT)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  requests   CaseRequest[] @relation("ClientRequests")
+  documents  Document[]    @relation("GeneratedBy")
+  auditLogs  AuditLog[]
+}
+
+/// One row per document type the office offers. The .docx template itself is
+/// stored here so a new version can be uploaded without a redeploy.
+model CaseTemplate {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  nameAr      String
+  descriptionAr String?
+  version     Int      @default(1)
+  active      Boolean  @default(true)
+  docx        Bytes
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  requests CaseRequest[]
+}
+
+model CaseRequest {
+  id          String        @id @default(cuid())
+  reference   String        @unique
+  templateKey String
+  clientId    String
+  status      RequestStatus @default(SUBMITTED)
+  /// values submitted by the client
+  data        Json
+  /// lawyer's corrections, merged over `data` at generation time
+  reviewedData Json?
+  clientNote  String?
+  lawyerNote  String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  client    User         @relation("ClientRequests", fields: [clientId], references: [id])
+  template  CaseTemplate @relation(fields: [templateKey], references: [key])
+  documents Document[]
+
+  @@index([clientId, createdAt])
+  @@index([status, createdAt])
+}
+
+model Document {
+  id            String   @id @default(cuid())
+  requestId     String
+  version       Int
+  filename      String
+  mimeType      String   @default("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+  bytes         Bytes
+  generatedById String
+  createdAt     DateTime @default(now())
+
+  request     CaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  generatedBy User        @relation("GeneratedBy", fields: [generatedById], references: [id])
+
+  @@unique([requestId, version])
+}
+
+/// Sequential human-facing reference numbers, e.g. SR-2026-0001
+model Counter {
+  id    String @id @default(cuid())
+  key   String @unique
+  value Int    @default(0)
+}
+
+model AuditLog {
+  id       String   @id @default(cuid())
+  actorId  String?
+  action   String
+  entity   String
+  entityId String
+  meta     Json?
+  ip       String?
+  at       DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id])
+
+  @@index([entity, entityId, at])
+  @@index([at])
+}

@@ -1,0 +1,39 @@
+{
+  "name": "sahifa",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && prisma db push && tsx prisma/seed.ts && next build",
+    "start": "next start",
+    "postinstall": "prisma generate",
+    "db:push": "prisma db push && prisma generate",
+    "db:seed": "tsx prisma/seed.ts",
+    "template:build": "python3 scripts/build_template.py",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "bcryptjs": "3.0.3",
+    "docxtemplater": "3.69.3",
+    "dotenv": "17.2.3",
+    "jose": "6.2.10",
+    "next": "16.3.4",
+    "pg": "8.16.3",
+    "pizzip": "3.2.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "resend": "6.25.0",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "24.7.0",
+    "@types/pg": "8.15.5",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "prisma": "7.10.0",
+    "tsx": "4.23.12",
+    "typescript": "5.9.3"
+  }
+}
