@@ -170,10 +170,10 @@ main {
 /* ---------- collapsible sections ---------- */
 
 /* the header button carries the card's padding, so the entire header strip —
-   not just the text — is clickable */
+   not just the text — is clickable. NOTE: no overflow:hidden here — it would
+   clip the calendar and hint popovers that open past the card's edge. */
 .card.collapsible {
   padding: 0;
-  overflow: hidden;
 }
 
 .section-head {
@@ -191,6 +191,11 @@ main {
   color: var(--ink);
   text-align: start;
   cursor: pointer;
+  border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
+}
+
+.section-head[aria-expanded='false'] {
+  border-radius: calc(var(--radius) - 1px);
 }
 
 .section-head:hover {
@@ -741,7 +746,11 @@ tbody tr:hover {
 .calendar {
   position: absolute;
   top: calc(100% + 8px);
-  inset-inline-start: 0;
+  /* explicit right/left, not logical properties: the popover itself is dir=ltr
+     (English calendar) while the page is rtl, and logical insets resolve
+     against the element's own direction */
+  right: 0;
+  left: auto;
   z-index: 40;
   width: 300px;
   max-width: 90vw;

@@ -3,23 +3,25 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { parseDate, toLatinDigits } from '@/lib/numerals'
 
-const MONTHS_AR = [
-  'يناير',
-  'فبراير',
-  'مارس',
-  'أبريل',
-  'مايو',
-  'يونيو',
-  'يوليو',
-  'أغسطس',
-  'سبتمبر',
-  'أكتوبر',
-  'نوفمبر',
-  'ديسمبر',
+// the calendar itself is English and reads left-to-right, while the field
+// label around it stays Arabic
+const MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ]
 
-// Kuwait's week starts on Sunday
-const WEEKDAY_INITIALS = ['ح', 'ن', 'ث', 'ر', 'خ', 'ج', 'س']
+// week starts on Sunday
+const WEEKDAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
 function todayParts() {
   const now = new Date()
@@ -45,8 +47,8 @@ export default function DateField({
   onChange,
   disabled,
   placeholder,
-  clearLabel = 'مسح',
-  todayLabel = 'اليوم',
+  clearLabel = 'Clear',
+  todayLabel = 'Today',
 }: {
   id: string
   name: string
@@ -130,9 +132,9 @@ export default function DateField({
       </button>
 
       {open ? (
-        <div className="calendar" role="dialog" aria-label="اختيار التاريخ">
+        <div className="calendar" role="dialog" aria-label="اختيار التاريخ" dir="ltr">
           <div className="calendar-head">
-            <button type="button" onClick={() => shift(-1)} aria-label="الشهر السابق">
+            <button type="button" onClick={() => shift(-1)} aria-label="Previous month">
               ‹
             </button>
             <div className="calendar-title">
@@ -141,9 +143,9 @@ export default function DateField({
                 onChange={(e) =>
                   setView((v) => ({ ...v, month: Number(e.target.value) }))
                 }
-                aria-label="الشهر"
+                aria-label="Month"
               >
-                {MONTHS_AR.map((label, index) => (
+                {MONTHS.map((label, index) => (
                   <option key={label} value={index + 1}>
                     {label}
                   </option>
@@ -154,7 +156,7 @@ export default function DateField({
                 onChange={(e) =>
                   setView((v) => ({ ...v, year: Number(e.target.value) }))
                 }
-                aria-label="السنة"
+                aria-label="Year"
               >
                 {Array.from({ length: 61 }, (_, i) => today.year + 5 - i).map(
                   (year) => (
@@ -165,7 +167,7 @@ export default function DateField({
                 )}
               </select>
             </div>
-            <button type="button" onClick={() => shift(1)} aria-label="الشهر التالي">
+            <button type="button" onClick={() => shift(1)} aria-label="Next month">
               ›
             </button>
           </div>
