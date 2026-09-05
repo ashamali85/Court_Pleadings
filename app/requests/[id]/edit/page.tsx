@@ -71,6 +71,7 @@ export default async function EditRequestPage({
               loading: t('common.loading'),
               submitHint: t('client.new.submitHint'),
               needsFix: t('message.needsFix'),
+              working: t('common.working'),
             }}
           />
         </div>

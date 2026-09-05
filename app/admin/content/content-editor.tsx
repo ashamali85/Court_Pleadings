@@ -3,6 +3,7 @@
 import { useActionState, useMemo, useState } from 'react'
 import { saveContent, type ContentState } from '@/app/admin/content/actions'
 import SectionCard, { Accordion } from '@/components/collapsible'
+import LoadingOverlay from '@/components/loading-overlay'
 import SubmitButton from '@/components/submit-button'
 
 type Entry = {
@@ -25,6 +26,7 @@ export default function ContentEditor({
     loading: string
     defaultLabel: string
     modified: string
+    working: string
   }
 }) {
   const [state, action] = useActionState<ContentState, FormData>(saveContent, {})
@@ -61,6 +63,7 @@ export default function ContentEditor({
 
   return (
     <form action={action}>
+      <LoadingOverlay label={labels.working} />
       {state.error ? <div className="alert error">{state.error}</div> : null}
       {state.ok ? <div className="alert ok">{state.ok}</div> : null}
 

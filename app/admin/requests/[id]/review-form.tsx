@@ -4,6 +4,7 @@ import { useActionState, useRef } from 'react'
 import { rejectRequest, submitReview, type ReviewState } from '@/app/admin/actions'
 import SectionCard, { Accordion } from '@/components/collapsible'
 import { Field, useFieldValues } from '@/components/fields'
+import LoadingOverlay from '@/components/loading-overlay'
 import SubmitButton from '@/components/submit-button'
 import type { SectionDef } from '@/lib/templates/types'
 
@@ -55,6 +56,7 @@ export default function ReviewForm({
     reject: string
     download: string
     needsFix: string
+    working: string
   }
 }) {
   const [state, action] = useActionState<ReviewState, FormData>(submitReview, {})
@@ -91,6 +93,7 @@ export default function ReviewForm({
     // so only ever one section is open
     <Accordion>
       <form action={action}>
+        <LoadingOverlay label={labels.working} />
         <input type="hidden" name="requestId" value={requestId} />
         <input type="hidden" name="intent" defaultValue="save" ref={intentRef} />
 
@@ -218,6 +221,7 @@ export default function ReviewForm({
         hasError={Boolean(rejectState.error)}
       >
         <form action={rejectAction}>
+          <LoadingOverlay label={labels.working} />
           <input type="hidden" name="requestId" value={requestId} />
           {rejectState.error ? (
             <div className="alert error">{rejectState.error}</div>

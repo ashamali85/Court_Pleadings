@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import type { RequestFormState } from '@/app/requests/actions'
 import SectionCard, { Accordion } from '@/components/collapsible'
 import { Field, useFieldValues } from '@/components/fields'
+import LoadingOverlay from '@/components/loading-overlay'
 import SubmitButton from '@/components/submit-button'
 import type { SectionDef } from '@/lib/templates/types'
 
@@ -34,6 +35,7 @@ export default function RequestForm({
     loading: string
     submitHint: string
     needsFix: string
+    working: string
   }
 }) {
   const [state, formAction] = useActionState<RequestFormState, FormData>(action, {})
@@ -46,6 +48,7 @@ export default function RequestForm({
   return (
     <form action={formAction}>
       <Accordion>
+        <LoadingOverlay label={labels.working} />
         <input type="hidden" name="templateKey" value={templateKey} />
         {requestId ? <input type="hidden" name="requestId" value={requestId} /> : null}
 

@@ -40,6 +40,7 @@ export default async function LoginPage({
                 password: t('login.password'),
                 submit: t('login.submit'),
                 loading: t('login.loading'),
+                working: t('common.working'),
               }}
             />
           </div>

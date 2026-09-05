@@ -7,6 +7,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { renderDocx } from '../lib/docgen'
+import { toLatinDigits, weekdayAr } from '../lib/numerals'
 import { amountToArabicWords, numberToArabicWords } from '../lib/tafqeet'
 import { evictionTemplate } from '../lib/templates/eviction'
 
@@ -54,7 +55,6 @@ const sample = {
   premises_same_as_defendant: true,
   premises_address: '',
   premises_lead: 'الشقة الكائنة في',
-  lease_day_name: 'الأحد',
   lease_date: '19/5/2019',
   property_use: 'سكن عائلي',
   monthly_rent: '470',
@@ -74,7 +74,12 @@ if (!parsed.success) {
 
 const placeholders = evictionTemplate.derive(parsed.data, {}) as Record<string, string>
 
+// the weekday is derived from the date: 19/5/2019 was a Sunday
 check('lease phrase', placeholders.lease_date_phrase, 'مؤرخ في الأحد الموافق 19/5/2019')
+check('weekday derivation', weekdayAr('19/5/2019'), 'الأحد')
+check('weekday derivation 2', weekdayAr('29/3/2026'), 'الأحد')
+check('arabic-indic digits', toLatinDigits('٤٥٠٫٥٠٠'), '450.500')
+check('arabic-indic date', toLatinDigits('١٩/٥/٢٠٢٦'), '19/5/2026')
 check('months count', placeholders.arrears_months_count, '6')
 check('months list', placeholders.arrears_months_list, '3 و 4 و 5 و 6 و 7 و 8')
 check('total', placeholders.arrears_total, '2820')

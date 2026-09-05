@@ -619,3 +619,251 @@ tbody tr:hover {
   color: var(--ink-soft);
   font-weight: 500;
 }
+
+/* ---------- busy overlay ---------- */
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(16, 40, 79, 0.32);
+  backdrop-filter: blur(2px);
+}
+
+.loading-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 20px 50px rgba(10, 46, 102, 0.28);
+  padding: 24px 34px 26px;
+  min-width: min(320px, 84vw);
+  text-align: center;
+}
+
+.loading-title {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--brand-dark);
+  margin-bottom: 16px;
+}
+
+.loading-bar {
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--brand-dark), var(--brand) 60%, var(--brand-2));
+  position: relative;
+  overflow: hidden;
+}
+
+.loading-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.38) 0 8px,
+    rgba(255, 255, 255, 0) 8px 18px
+  );
+  background-size: 26px 26px;
+  animation: barber 0.75s linear infinite;
+}
+
+@keyframes barber {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 26px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-bar::after {
+    animation-duration: 3s;
+  }
+}
+
+/* ---------- date field ---------- */
+
+.date-wrap {
+  position: relative;
+}
+
+.date-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  text-align: start;
+}
+
+.date-trigger:hover:not(:disabled) {
+  border-color: var(--brand-2);
+}
+
+.date-trigger:disabled {
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  cursor: not-allowed;
+}
+
+.date-trigger[aria-expanded='true'] {
+  border-color: var(--brand-2);
+  box-shadow: 0 0 0 3px var(--brand-tint);
+}
+
+.date-value {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.date-placeholder {
+  color: var(--ink-soft);
+}
+
+.date-icon {
+  opacity: 0.7;
+  font-size: 15px;
+}
+
+.calendar {
+  position: absolute;
+  top: calc(100% + 8px);
+  inset-inline-start: 0;
+  z-index: 40;
+  width: 300px;
+  max-width: 90vw;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 14px 36px rgba(10, 46, 102, 0.18);
+  padding: 14px;
+}
+
+.calendar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.calendar-head > button {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--brand);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.calendar-head > button:hover {
+  background: var(--brand-tint);
+}
+
+.calendar-title {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+}
+
+.calendar-title select {
+  padding: 6px 8px;
+  font-size: 13.5px;
+  border-radius: 8px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.calendar-weekdays {
+  margin-bottom: 6px;
+}
+
+.calendar-weekdays span {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  padding-bottom: 4px;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13.5px;
+  font-family: 'Inter', system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.calendar-day:hover {
+  background: var(--brand-tint);
+}
+
+.calendar-day.today {
+  border-color: var(--brand-2);
+}
+
+.calendar-day.selected {
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: #fff;
+  font-weight: 700;
+}
+
+.calendar-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.calendar-foot button {
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--brand-2);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.calendar-foot button:hover {
+  background: var(--brand-tint);
+}
+
+/* plain numeric text box — no spinner arrows, RTL like the rest of the form */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

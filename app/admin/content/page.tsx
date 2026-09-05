@@ -41,6 +41,7 @@ export default async function ContentPage() {
               loading: t('common.loading'),
               defaultLabel: t('admin.content.defaultLabel'),
               modified: t('admin.content.modifiedBadge'),
+              working: t('common.working'),
             }}
           />
         </div>

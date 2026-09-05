@@ -150,6 +150,7 @@ export default async function ReviewRequestPage({
               reject: t('admin.review.rejectBtn'),
               download: t('admin.review.downloadLink'),
               needsFix: t('message.needsFix'),
+              working: t('common.working'),
             }}
           />
         </div>

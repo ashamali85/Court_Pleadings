@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react'
 import { login, type LoginState } from '@/app/(auth)/actions'
+import LoadingOverlay from '@/components/loading-overlay'
 import SubmitButton from '@/components/submit-button'
 
 export default function LoginForm({
@@ -9,12 +10,19 @@ export default function LoginForm({
   labels,
 }: {
   next?: string
-  labels: { email: string; password: string; submit: string; loading: string }
+  labels: {
+    email: string
+    password: string
+    submit: string
+    loading: string
+    working: string
+  }
 }) {
   const [state, action] = useActionState<LoginState, FormData>(login, {})
 
   return (
     <form action={action}>
+      <LoadingOverlay label={labels.working} />
       {state.error ? <div className="alert error">{state.error}</div> : null}
 
       <input type="hidden" name="next" value={next ?? ''} />

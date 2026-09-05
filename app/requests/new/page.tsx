@@ -44,6 +44,7 @@ export default async function NewRequestPage() {
               loading: t('common.loading'),
               submitHint: t('client.new.submitHint'),
               needsFix: t('message.needsFix'),
+              working: t('common.working'),
             }}
           />
         </div>

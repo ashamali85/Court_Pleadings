@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import DateField from '@/components/date-field'
 import type { FieldDef } from '@/lib/templates/types'
 
 type Values = Record<string, unknown>
@@ -112,7 +113,16 @@ export function Field({
         ) : null}
       </div>
 
-      {field.type === 'textarea' ? (
+      {field.type === 'date' ? (
+        <DateField
+          id={field.name}
+          name={field.name}
+          value={value}
+          onChange={(next) => onChange(field.name, next)}
+          disabled={isDisabled}
+          placeholder={field.placeholder}
+        />
+      ) : field.type === 'textarea' ? (
         <textarea
           id={field.name}
           name={field.name}
@@ -140,14 +150,12 @@ export function Field({
         <input
           id={field.name}
           name={field.name}
-          type={field.type === 'number' ? 'number' : 'text'}
-          step={field.type === 'number' ? '0.001' : undefined}
+          type="text"
           inputMode={field.type === 'number' ? 'decimal' : undefined}
           value={value}
           placeholder={field.placeholder}
           onChange={(e) => onChange(field.name, e.target.value)}
           disabled={isDisabled}
-          dir={field.type === 'number' ? 'ltr' : undefined}
         />
       )}
 

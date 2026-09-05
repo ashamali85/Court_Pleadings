@@ -1,3 +1,4 @@
+import { toLatinDigits } from '@/lib/numerals'
 import { evictionTemplate } from '@/lib/templates/eviction'
 import type { FieldDef, TemplateDef } from '@/lib/templates/types'
 
@@ -26,7 +27,10 @@ export function formDataToValues(
       const raw = formData.get(field.name)
       values[field.name] = raw === 'on' || raw === 'true'
     } else {
-      values[field.name] = (formData.get(field.name) ?? '').toString().trim()
+      const raw = (formData.get(field.name) ?? '').toString().trim()
+      // an Arabic keyboard types ٤٥٠ and ١٩/٥/٢٠٢٦; store Latin digits
+      values[field.name] =
+        field.type === 'number' || field.type === 'date' ? toLatinDigits(raw) : raw
     }
   }
   return values

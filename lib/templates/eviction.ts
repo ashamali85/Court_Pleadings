@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { weekdayAr } from '@/lib/numerals'
 import { amountToArabicWords, formatAmount } from '@/lib/tafqeet'
 import type { FieldDef, Placeholders, TemplateDef } from '@/lib/templates/types'
 
@@ -23,7 +24,6 @@ export const evictionSchema = z
     premises_same_as_defendant: z.boolean(),
     premises_address: z.string().trim().max(2000),
     premises_lead: z.string().trim().min(2).max(60),
-    lease_day_name: z.string().trim().max(20),
     lease_date: z
       .string()
       .trim()
@@ -73,7 +73,6 @@ export const evictionDefaults: EvictionValues = {
   premises_same_as_defendant: true,
   premises_address: '',
   premises_lead: 'الشقة الكائنة في',
-  lease_day_name: '',
   lease_date: '',
   property_use: '',
   monthly_rent: 0,
@@ -143,19 +142,13 @@ const fields: Record<string, FieldDef> = {
     mirrorOf: 'defendant_address',
     hiddenWhen: 'premises_same_as_defendant',
   },
-  lease_day_name: {
-    name: 'lease_day_name',
-    labelAr: 'يوم تحرير عقد الإيجار (اختياري)',
-    hintAr: 'مثال: الأحد. اتركه فارغاً إذا لم يكن معروفاً.',
-    type: 'text',
-  },
   lease_date: {
     name: 'lease_date',
     labelAr: 'تاريخ عقد الإيجار',
-    hintAr: 'بصيغة يوم/شهر/سنة، مثال 19/5/2019',
-    type: 'text',
+    hintAr: 'اختر التاريخ من التقويم. يُستخرج اسم اليوم تلقائياً للصحيفة.',
+    type: 'date',
     required: true,
-    placeholder: '19/5/2019',
+    placeholder: 'يوم/شهر/سنة',
   },
   property_use: {
     name: 'property_use',
@@ -167,7 +160,7 @@ const fields: Record<string, FieldDef> = {
   monthly_rent: {
     name: 'monthly_rent',
     labelAr: 'قيمة الأجرة الشهرية (د.ك)',
-    hintAr: 'الرقم فقط. يُكتب المبلغ بالحروف تلقائياً في الصحيفة.',
+    hintAr: 'الرقم فقط، مثال 450 أو 450.500. يُكتب المبلغ بالحروف تلقائياً في الصحيفة.',
     type: 'number',
     required: true,
     placeholder: '470',
@@ -177,8 +170,8 @@ const fields: Record<string, FieldDef> = {
     labelAr: 'تاريخ بدء الامتناع عن سداد الأجرة (اختياري)',
     hintAr:
       'إذا تُرك فارغاً يُحتسب تلقائياً كأول يوم من شهر بداية المطالبة، مثال 1/3/2024',
-    type: 'text',
-    placeholder: '1/3/2024',
+    type: 'date',
+    placeholder: 'يوم/شهر/سنة',
   },
   arrears_from_month: {
     name: 'arrears_from_month',
@@ -230,8 +223,10 @@ function derive(
     ? values.defendant_address
     : values.premises_address
 
-  const leasePhrase = values.lease_day_name
-    ? `مؤرخ في ${values.lease_day_name} الموافق ${values.lease_date}`
+  // the weekday is derived from the date itself rather than typed
+  const leaseDay = weekdayAr(values.lease_date)
+  const leasePhrase = leaseDay
+    ? `مؤرخ في ${leaseDay} الموافق ${values.lease_date}`
     : `مؤرخ في ${values.lease_date}`
 
   const monthsList = Array.from(
@@ -334,7 +329,6 @@ export const evictionTemplate: TemplateDef<EvictionValues> = {
         fields.premises_lead,
         fields.premises_same_as_defendant,
         fields.premises_address,
-        fields.lease_day_name,
         fields.lease_date,
         fields.property_use,
         fields.monthly_rent,

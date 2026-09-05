@@ -1,6 +1,6 @@
 import type { ZodType } from 'zod'
 
-export type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'boolean'
+export type FieldType = 'text' | 'textarea' | 'number' | 'date' | 'select' | 'boolean'
 
 export type FieldDef = {
   name: string
