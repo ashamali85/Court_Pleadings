@@ -2,7 +2,7 @@
 
 import { useActionState, useMemo, useState } from 'react'
 import { saveContent, type ContentState } from '@/app/admin/content/actions'
-import SectionCard from '@/components/collapsible'
+import SectionCard, { Accordion } from '@/components/collapsible'
 import SubmitButton from '@/components/submit-button'
 
 type Entry = {
@@ -56,6 +56,9 @@ export default function ContentEditor({
     (key) => !groups.some((g) => g.key === key),
   )
 
+  // while searching, open the first matching group so results are visible
+  const firstGroupKey = knownGroups[0]?.key ?? otherGroups[0] ?? null
+
   return (
     <form action={action}>
       {state.error ? <div className="alert error">{state.error}</div> : null}
@@ -74,54 +77,56 @@ export default function ContentEditor({
         </div>
       </div>
 
-      {[
-        ...knownGroups.map((g) => [g.key, g.titleAr] as const),
-        ...otherGroups.map((k) => [k, k] as const),
-      ].map(([groupKey, title]) => {
-        const items = byGroup.get(groupKey) ?? []
-        const changed = items.filter((e) => e.value !== e.defaultValue).length
-        return (
-          <SectionCard
-            key={groupKey}
-            title={title}
-            defaultOpen={Boolean(query)}
-            badge={changed > 0 ? `${changed} ${labels.modified}` : `${items.length}`}
-          >
-            {items.map((entry) => {
-              const long = entry.defaultValue.length > 60
-              return (
-                <div className="field" key={entry.key}>
-                  <label htmlFor={`text__${entry.key}`}>
-                    <span className="content-key" dir="ltr">
-                      {entry.key}
-                    </span>
-                  </label>
-                  {long ? (
-                    <textarea
-                      id={`text__${entry.key}`}
-                      name={`text__${entry.key}`}
-                      rows={3}
-                      defaultValue={entry.value}
-                    />
-                  ) : (
-                    <input
-                      id={`text__${entry.key}`}
-                      name={`text__${entry.key}`}
-                      type="text"
-                      defaultValue={entry.value}
-                    />
-                  )}
-                  {entry.value !== entry.defaultValue ? (
-                    <div className="hint">
-                      {labels.defaultLabel} {entry.defaultValue}
-                    </div>
-                  ) : null}
-                </div>
-              )
-            })}
-          </SectionCard>
-        )
-      })}
+      <Accordion initialOpenId={query ? firstGroupKey : null}>
+        {[
+          ...knownGroups.map((g) => [g.key, g.titleAr] as const),
+          ...otherGroups.map((k) => [k, k] as const),
+        ].map(([groupKey, title]) => {
+          const items = byGroup.get(groupKey) ?? []
+          const changed = items.filter((e) => e.value !== e.defaultValue).length
+          return (
+            <SectionCard
+              key={groupKey}
+              id={groupKey}
+              title={title}
+              badge={changed > 0 ? `${changed} ${labels.modified}` : `${items.length}`}
+            >
+              {items.map((entry) => {
+                const long = entry.defaultValue.length > 60
+                return (
+                  <div className="field" key={entry.key}>
+                    <label htmlFor={`text__${entry.key}`}>
+                      <span className="content-key" dir="ltr">
+                        {entry.key}
+                      </span>
+                    </label>
+                    {long ? (
+                      <textarea
+                        id={`text__${entry.key}`}
+                        name={`text__${entry.key}`}
+                        rows={3}
+                        defaultValue={entry.value}
+                      />
+                    ) : (
+                      <input
+                        id={`text__${entry.key}`}
+                        name={`text__${entry.key}`}
+                        type="text"
+                        defaultValue={entry.value}
+                      />
+                    )}
+                    {entry.value !== entry.defaultValue ? (
+                      <div className="hint">
+                        {labels.defaultLabel} {entry.defaultValue}
+                      </div>
+                    ) : null}
+                  </div>
+                )
+              })}
+            </SectionCard>
+          )
+        })}
+      </Accordion>
 
       <div className="card">
         <div className="actions">

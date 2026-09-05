@@ -2,7 +2,7 @@
 
 import { useActionState, useRef } from 'react'
 import { rejectRequest, submitReview, type ReviewState } from '@/app/admin/actions'
-import SectionCard from '@/components/collapsible'
+import SectionCard, { Accordion } from '@/components/collapsible'
 import { Field, useFieldValues } from '@/components/fields'
 import SubmitButton from '@/components/submit-button'
 import type { SectionDef } from '@/lib/templates/types'
@@ -87,7 +87,9 @@ export default function ReviewForm({
   ) : null
 
   return (
-    <>
+    // one accordion across the whole screen, including the reject card below,
+    // so only ever one section is open
+    <Accordion>
       <form action={action}>
         <input type="hidden" name="requestId" value={requestId} />
         <input type="hidden" name="intent" defaultValue="save" ref={intentRef} />
@@ -100,6 +102,7 @@ export default function ReviewForm({
           return (
             <SectionCard
               key={section.key}
+              id={section.key}
               title={section.titleAr}
               hasError={hasError}
               errorLabel={labels.needsFix}
@@ -139,7 +142,7 @@ export default function ReviewForm({
           )
         })}
 
-        <SectionCard title={labels.computedTitle}>
+        <SectionCard id="computed" title={labels.computedTitle}>
           <p className="muted">{labels.computedHint}</p>
           <dl className="kv">
             {PREVIEW_ORDER.filter((p) => preview[p.key]).map((p) => (
@@ -152,6 +155,7 @@ export default function ReviewForm({
         </SectionCard>
 
         <SectionCard
+          id="overrides"
           title={labels.overrideTitle}
           badge={overrideCount > 0 ? String(overrideCount) : undefined}
         >
@@ -208,7 +212,11 @@ export default function ReviewForm({
         </div>
       </form>
 
-      <SectionCard title={labels.rejectTitle} hasError={Boolean(rejectState.error)}>
+      <SectionCard
+        id="reject"
+        title={labels.rejectTitle}
+        hasError={Boolean(rejectState.error)}
+      >
         <form action={rejectAction}>
           <input type="hidden" name="requestId" value={requestId} />
           {rejectState.error ? (
@@ -224,6 +232,6 @@ export default function ReviewForm({
           </SubmitButton>
         </form>
       </SectionCard>
-    </>
+    </Accordion>
   )
 }
