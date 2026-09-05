@@ -7,14 +7,14 @@ import type { SectionDef } from '@/lib/templates/types'
 
 const PREVIEW_ORDER: { key: string; labelAr: string }[] = [
   { key: 'lease_date_phrase', labelAr: 'عبارة تاريخ العقد' },
-  { key: 'monthly_rent_words', labelAr: 'الأجرة الشهرية تفقيطاً' },
+  { key: 'monthly_rent_words', labelAr: 'الأجرة الشهرية (كتابةً)' },
   { key: 'nonpayment_start_date', labelAr: 'تاريخ بدء الامتناع' },
   { key: 'arrears_months_count', labelAr: 'عدد الأشهر' },
   { key: 'arrears_months_list', labelAr: 'الأشهر المطالب بها' },
   { key: 'arrears_total', labelAr: 'إجمالي المتأخر (رقماً)' },
-  { key: 'arrears_total_words', labelAr: 'إجمالي المتأخر تفقيطاً' },
+  { key: 'arrears_total_words', labelAr: 'إجمالي المتأخر (كتابةً)' },
   { key: 'benefit_start_date', labelAr: 'بدء مقابل الانتفاع' },
-  { key: 'penalty_amount_words', labelAr: 'الشرط الجزائي تفقيطاً' },
+  { key: 'penalty_amount_words', labelAr: 'الشرط الجزائي (كتابةً)' },
   { key: 'ordinal_eviction', labelAr: 'ترتيب طلب الإخلاء' },
   { key: 'ordinal_arrears', labelAr: 'ترتيب طلب الأجرة' },
   { key: 'ordinal_penalty', labelAr: 'ترتيب الشرط الجزائي' },

@@ -3,7 +3,6 @@ import { amountToArabicWords, formatAmount } from '@/lib/tafqeet'
 import type { FieldDef, Placeholders, TemplateDef } from '@/lib/templates/types'
 
 const DATE_RE = /^\d{1,2}\/\d{1,2}\/\d{4}$/
-const DASH_DATE_RE = /^\d{1,2}-\d{1,2}-\d{4}$/
 
 const monthOptions = Array.from({ length: 12 }, (_, i) => ({
   value: String(i + 1),
@@ -168,7 +167,7 @@ const fields: Record<string, FieldDef> = {
   monthly_rent: {
     name: 'monthly_rent',
     labelAr: 'قيمة الأجرة الشهرية (د.ك)',
-    hintAr: 'الرقم فقط. يتم تفقيط المبلغ تلقائياً في الصحيفة.',
+    hintAr: 'الرقم فقط. يُكتب المبلغ بالحروف تلقائياً في الصحيفة.',
     type: 'number',
     required: true,
     placeholder: '470',
@@ -308,11 +307,11 @@ export const evictionTemplate: TemplateDef<EvictionValues> = {
     { name: 'nonpayment_start_date', labelAr: 'تاريخ بدء الامتناع' },
     { name: 'arrears_months_list', labelAr: 'قائمة الأشهر المتأخرة' },
     { name: 'arrears_total', labelAr: 'إجمالي المتأخر (رقماً)' },
-    { name: 'arrears_total_words', labelAr: 'إجمالي المتأخر (تفقيطاً)' },
-    { name: 'monthly_rent_words', labelAr: 'الأجرة الشهرية (تفقيطاً)' },
+    { name: 'arrears_total_words', labelAr: 'إجمالي المتأخر (كتابةً)' },
+    { name: 'monthly_rent_words', labelAr: 'الأجرة الشهرية (كتابةً)' },
     { name: 'benefit_start_date', labelAr: 'تاريخ بدء مقابل الانتفاع' },
     { name: 'penalty_amount', labelAr: 'مبلغ الشرط الجزائي (رقماً)' },
-    { name: 'penalty_amount_words', labelAr: 'مبلغ الشرط الجزائي (تفقيطاً)' },
+    { name: 'penalty_amount_words', labelAr: 'مبلغ الشرط الجزائي (كتابةً)' },
   ],
   summary: (v) =>
     `${v.defendant_name || '—'} · ${formatAmount(v.monthly_rent)} د.ك شهرياً · الأشهر ${
