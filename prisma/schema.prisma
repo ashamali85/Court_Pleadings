@@ -33,6 +33,7 @@ model User {
   requests   CaseRequest[] @relation("ClientRequests")
   documents  Document[]    @relation("GeneratedBy")
   auditLogs  AuditLog[]
+  siteTexts  SiteText[]
 }
 
 /// One row per document type the office offers. The .docx template itself is
@@ -88,6 +89,18 @@ model Document {
   generatedBy User        @relation("GeneratedBy", fields: [generatedById], references: [id])
 
   @@unique([requestId, version])
+}
+
+/// Every user-visible string in the app. A row exists only when the admin has
+/// overridden the built-in default (lib/content/defaults.ts), so deleting a row
+/// restores the original wording.
+model SiteText {
+  key         String   @id
+  value       String
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+
+  updatedBy User? @relation(fields: [updatedById], references: [id])
 }
 
 /// Sequential human-facing reference numbers, e.g. SR-2026-0001

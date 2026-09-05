@@ -15,7 +15,9 @@ let failures = 0
 function check(label: string, actual: unknown, expected: unknown) {
   const ok = actual === expected
   if (!ok) failures++
-  console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}\n      ${actual}${ok ? '' : `\n      expected: ${expected}`}`)
+  console.log(
+    `${ok ? 'PASS' : 'FAIL'}  ${label}\n      ${actual}${ok ? '' : `\n      expected: ${expected}`}`,
+  )
 }
 
 // ---------- تفقيط ----------
@@ -23,7 +25,11 @@ console.log('--- tafqeet')
 check('470 (oblique)', numberToArabicWords(470), 'أربعمائة وسبعين')
 check('470 (nominative)', numberToArabicWords(470, 'nominative'), 'أربعمائة وسبعون')
 check('2820 (oblique)', numberToArabicWords(2820), 'ألفين وثمانمائة وعشرين')
-check('2820 (nominative)', numberToArabicWords(2820, 'nominative'), 'ألفان وثمانمائة وعشرون')
+check(
+  '2820 (nominative)',
+  numberToArabicWords(2820, 'nominative'),
+  'ألفان وثمانمائة وعشرون',
+)
 check('1000', numberToArabicWords(1000), 'ألف')
 check('3500', numberToArabicWords(3500), 'ثلاثة آلاف وخمسمائة')
 check('11250', numberToArabicWords(11250), 'أحد عشر ألفاً ومائتين وخمسين')
@@ -31,7 +37,11 @@ check('25', numberToArabicWords(25), 'خمسة وعشرين')
 check('115', numberToArabicWords(115), 'مائة وخمسة عشر')
 check('200', numberToArabicWords(200), 'مائتين')
 check('currency 470', amountToArabicWords(470), 'أربعمائة وسبعين دينار كويتي')
-check('currency 470.5', amountToArabicWords(470.5), 'أربعمائة وسبعين دينار كويتي وخمسمائة فلساً')
+check(
+  'currency 470.5',
+  amountToArabicWords(470.5),
+  'أربعمائة وسبعين دينار كويتي وخمسمائة فلساً',
+)
 
 // ---------- the sample case from the office's own document ----------
 console.log('\n--- schema + derive')
@@ -68,7 +78,11 @@ check('lease phrase', placeholders.lease_date_phrase, 'مؤرخ في الأحد 
 check('months count', placeholders.arrears_months_count, '6')
 check('months list', placeholders.arrears_months_list, '3 و 4 و 5 و 6 و 7 و 8')
 check('total', placeholders.arrears_total, '2820')
-check('total words', placeholders.arrears_total_words, 'ألفين وثمانمائة وعشرين دينار كويتي')
+check(
+  'total words',
+  placeholders.arrears_total_words,
+  'ألفين وثمانمائة وعشرين دينار كويتي',
+)
 check('non-payment start', placeholders.nonpayment_start_date, '1/3/2024')
 check('benefit start', placeholders.benefit_start_date, '1-9-2024')
 check('ordinal eviction', placeholders.ordinal_eviction, 'أولاً')
@@ -86,7 +100,9 @@ check('renumbering: costs becomes second', trimmed.ordinal_costs, 'ثانياً'
 
 // ---------- render ----------
 console.log('\n--- render')
-const templateBytes = readFileSync(join(process.cwd(), 'templates', 'eviction-petition.docx'))
+const templateBytes = readFileSync(
+  join(process.cwd(), 'templates', 'eviction-petition.docx'),
+)
 const out = renderDocx(templateBytes, evictionTemplate.derive(parsed.data, {}))
 writeFileSync(join(process.cwd(), 'sample-output.docx'), out)
 console.log(`PASS  wrote sample-output.docx (${out.byteLength} bytes)`)

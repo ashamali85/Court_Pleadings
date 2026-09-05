@@ -4,6 +4,7 @@ import { useActionState, useRef } from 'react'
 import { rejectRequest, submitReview, type ReviewState } from '@/app/admin/actions'
 import SectionCard from '@/components/collapsible'
 import { Field, useFieldValues } from '@/components/fields'
+import SubmitButton from '@/components/submit-button'
 import type { SectionDef } from '@/lib/templates/types'
 
 const PREVIEW_ORDER: { key: string; labelAr: string }[] = [
@@ -30,6 +31,7 @@ export default function ReviewForm({
   overrides,
   lawyerNote,
   preview,
+  labels,
 }: {
   requestId: string
   sections: SectionDef[]
@@ -38,8 +40,28 @@ export default function ReviewForm({
   overrides: Record<string, string>
   lawyerNote: string
   preview: Record<string, string>
+  labels: {
+    computedTitle: string
+    computedHint: string
+    overrideTitle: string
+    overrideHint: string
+    noteTitle: string
+    generate: string
+    generateLoading: string
+    save: string
+    loading: string
+    rejectTitle: string
+    rejectReason: string
+    reject: string
+    download: string
+    needsFix: string
+  }
 }) {
-  const [state, action, pending] = useActionState<ReviewState, FormData>(submitReview, {})
+  const [state, action] = useActionState<ReviewState, FormData>(submitReview, {})
+  const [rejectState, rejectAction] = useActionState<ReviewState, FormData>(
+    rejectRequest,
+    {},
+  )
   const { values, onChange } = useFieldValues(initialValues)
   const errors = state.errors ?? {}
 
@@ -52,6 +74,18 @@ export default function ReviewForm({
 
   const overrideCount = Object.keys(overrides).length
 
+  const banner = state.ok ? (
+    <div className="alert ok">
+      {state.ok}{' '}
+      {state.documentId ? (
+        <a href={`/api/documents/${state.documentId}`}>
+          {labels.download}
+          {state.filename ? ` (${state.filename})` : ''}
+        </a>
+      ) : null}
+    </div>
+  ) : null
+
   return (
     <>
       <form action={action}>
@@ -59,21 +93,17 @@ export default function ReviewForm({
         <input type="hidden" name="intent" defaultValue="save" ref={intentRef} />
 
         {state.error ? <div className="alert error">{state.error}</div> : null}
-        {state.ok ? (
-          <div className="alert ok">
-            {state.ok}{' '}
-            {state.documentId ? (
-              <a href={`/api/documents/${state.documentId}`}>
-                تحميل الملف{state.filename ? ` (${state.filename})` : ''}
-              </a>
-            ) : null}
-          </div>
-        ) : null}
+        {banner}
 
         {sections.map((section) => {
           const hasError = section.fields.some((f) => Boolean(errors[f.name]))
           return (
-            <SectionCard key={section.key} title={section.titleAr} hasError={hasError}>
+            <SectionCard
+              key={section.key}
+              title={section.titleAr}
+              hasError={hasError}
+              errorLabel={labels.needsFix}
+            >
               {section.key === 'arrears' ? (
                 <>
                   <Field
@@ -109,11 +139,8 @@ export default function ReviewForm({
           )
         })}
 
-        <SectionCard title="النص المحتسب تلقائياً">
-          <p className="muted">
-            هذه القيم تُحسب من الحقول أعلاه وتُكتب في الصحيفة. حدّث الصفحة بعد الحفظ
-            لإعادة احتسابها، أو تجاوزها يدوياً من القسم التالي.
-          </p>
+        <SectionCard title={labels.computedTitle}>
+          <p className="muted">{labels.computedHint}</p>
           <dl className="kv">
             {PREVIEW_ORDER.filter((p) => preview[p.key]).map((p) => (
               <div key={p.key} style={{ display: 'contents' }}>
@@ -125,10 +152,10 @@ export default function ReviewForm({
         </SectionCard>
 
         <SectionCard
-          title="تجاوز يدوي (اختياري)"
-          badge={overrideCount > 0 ? `${overrideCount} تجاوز` : undefined}
+          title={labels.overrideTitle}
+          badge={overrideCount > 0 ? String(overrideCount) : undefined}
         >
-          <p className="muted">اترك الحقل فارغاً للإبقاء على القيمة المحتسبة تلقائياً.</p>
+          <p className="muted">{labels.overrideHint}</p>
           <div className="row">
             {overridable.map((item) => (
               <div className="field" key={item.name}>
@@ -146,27 +173,24 @@ export default function ReviewForm({
         </SectionCard>
 
         <div className="card">
-          <div className="section-title">ملاحظة المحامي وإصدار الصحيفة</div>
+          <div className="section-title">{labels.noteTitle}</div>
           <div className="field">
             <textarea name="lawyerNote" rows={3} defaultValue={lawyerNote} />
           </div>
           <div className="actions">
-            <button
-              className="btn"
-              type="submit"
+            <SubmitButton
+              loadingLabel={labels.generateLoading}
               onClick={() => setIntent('generate')}
-              disabled={pending}
             >
-              {pending ? 'جارٍ التنفيذ…' : 'إصدار الصحيفة (Word)'}
-            </button>
-            <button
+              {labels.generate}
+            </SubmitButton>
+            <SubmitButton
               className="btn secondary"
-              type="submit"
+              loadingLabel={labels.loading}
               onClick={() => setIntent('save')}
-              disabled={pending}
             >
-              حفظ التعديلات فقط
-            </button>
+              {labels.save}
+            </SubmitButton>
           </div>
 
           {/* repeated here: the banner at the top of a long form is easy to miss */}
@@ -177,22 +201,27 @@ export default function ReviewForm({
           ) : null}
           {state.ok && state.documentId ? (
             <div className="alert ok" style={{ marginTop: 16, marginBottom: 0 }}>
-              {state.ok} <a href={`/api/documents/${state.documentId}`}>تحميل الملف</a>
+              {state.ok}{' '}
+              <a href={`/api/documents/${state.documentId}`}>{labels.download}</a>
             </div>
           ) : null}
         </div>
       </form>
 
-      <SectionCard title="إعادة الطلب للعميل">
-        <form action={rejectRequest}>
+      <SectionCard title={labels.rejectTitle} hasError={Boolean(rejectState.error)}>
+        <form action={rejectAction}>
           <input type="hidden" name="requestId" value={requestId} />
+          {rejectState.error ? (
+            <div className="alert error">{rejectState.error}</div>
+          ) : null}
+          {rejectState.ok ? <div className="alert ok">{rejectState.ok}</div> : null}
           <div className="field">
-            <label htmlFor="rejectNote">سبب الإعادة</label>
-            <textarea id="rejectNote" name="lawyerNote" rows={2} required />
+            <label htmlFor="rejectionReason">{labels.rejectReason}</label>
+            <textarea id="rejectionReason" name="rejectionReason" rows={3} required />
           </div>
-          <button className="btn danger" type="submit">
-            إعادة الطلب للعميل
-          </button>
+          <SubmitButton className="btn danger" loadingLabel={labels.loading}>
+            {labels.reject}
+          </SubmitButton>
         </form>
       </SectionCard>
     </>

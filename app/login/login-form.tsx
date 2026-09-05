@@ -2,9 +2,16 @@
 
 import { useActionState } from 'react'
 import { login, type LoginState } from '@/app/(auth)/actions'
+import SubmitButton from '@/components/submit-button'
 
-export default function LoginForm({ next }: { next?: string }) {
-  const [state, action, pending] = useActionState<LoginState, FormData>(login, {})
+export default function LoginForm({
+  next,
+  labels,
+}: {
+  next?: string
+  labels: { email: string; password: string; submit: string; loading: string }
+}) {
+  const [state, action] = useActionState<LoginState, FormData>(login, {})
 
   return (
     <form action={action}>
@@ -13,12 +20,19 @@ export default function LoginForm({ next }: { next?: string }) {
       <input type="hidden" name="next" value={next ?? ''} />
 
       <div className="field">
-        <label htmlFor="email">البريد الإلكتروني</label>
-        <input id="email" name="email" type="email" autoComplete="username" required dir="ltr" />
+        <label htmlFor="email">{labels.email}</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          autoComplete="username"
+          required
+          dir="ltr"
+        />
       </div>
 
       <div className="field">
-        <label htmlFor="password">كلمة المرور</label>
+        <label htmlFor="password">{labels.password}</label>
         <input
           id="password"
           name="password"
@@ -29,9 +43,7 @@ export default function LoginForm({ next }: { next?: string }) {
         />
       </div>
 
-      <button className="btn" type="submit" disabled={pending}>
-        {pending ? 'جارٍ التحقق…' : 'دخول'}
-      </button>
+      <SubmitButton loadingLabel={labels.loading}>{labels.submit}</SubmitButton>
     </form>
   )
 }

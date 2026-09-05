@@ -1,37 +1,64 @@
 'use client'
 
 import { useActionState } from 'react'
-import { submitRequest, type RequestFormState } from '@/app/requests/actions'
+import type { RequestFormState } from '@/app/requests/actions'
 import SectionCard from '@/components/collapsible'
 import { Field, useFieldValues } from '@/components/fields'
+import SubmitButton from '@/components/submit-button'
 import type { SectionDef } from '@/lib/templates/types'
 
+export type RequestFormAction = (
+  state: RequestFormState,
+  formData: FormData,
+) => Promise<RequestFormState>
+
 export default function RequestForm({
+  action,
   templateKey,
+  requestId,
   sections,
   defaults,
+  clientNote,
+  labels,
 }: {
+  action: RequestFormAction
   templateKey: string
+  requestId?: string
   sections: SectionDef[]
   defaults: Record<string, unknown>
+  clientNote?: string
+  labels: {
+    noteSection: string
+    noteLabel: string
+    submit: string
+    loading: string
+    submitHint: string
+    needsFix: string
+  }
 }) {
-  const [state, action, pending] = useActionState<RequestFormState, FormData>(
-    submitRequest,
-    {},
-  )
-  const { values, onChange } = useFieldValues({ ...defaults, ...(state.values ?? {}) })
+  const [state, formAction] = useActionState<RequestFormState, FormData>(action, {})
+  const { values, onChange } = useFieldValues({
+    ...defaults,
+    ...(state.values ?? {}),
+  })
   const errors = state.errors ?? {}
 
   return (
-    <form action={action}>
+    <form action={formAction}>
       <input type="hidden" name="templateKey" value={templateKey} />
+      {requestId ? <input type="hidden" name="requestId" value={requestId} /> : null}
 
       {state.error ? <div className="alert error">{state.error}</div> : null}
 
       {sections.map((section) => {
         const hasError = section.fields.some((f) => Boolean(errors[f.name]))
         return (
-          <SectionCard key={section.key} title={section.titleAr} hasError={hasError}>
+          <SectionCard
+            key={section.key}
+            title={section.titleAr}
+            hasError={hasError}
+            errorLabel={labels.needsFix}
+          >
             {section.key === 'arrears' ? (
               <>
                 <Field
@@ -67,21 +94,22 @@ export default function RequestForm({
         )
       })}
 
-      <SectionCard title="ملاحظات إضافية">
+      <SectionCard title={labels.noteSection}>
         <div className="field">
-          <label htmlFor="clientNote">ملاحظات للمحامي (اختياري)</label>
-          <textarea id="clientNote" name="clientNote" rows={3} />
+          <label htmlFor="clientNote">{labels.noteLabel}</label>
+          <textarea
+            id="clientNote"
+            name="clientNote"
+            rows={3}
+            defaultValue={clientNote ?? ''}
+          />
         </div>
       </SectionCard>
 
       <div className="card">
         <div className="actions">
-          <button className="btn" type="submit" disabled={pending}>
-            {pending ? 'جارٍ الإرسال…' : 'إرسال الطلب'}
-          </button>
-          <span className="hint">
-            بعد الإرسال يراجع المحامي البيانات ويصدر الصحيفة بصيغة Word.
-          </span>
+          <SubmitButton loadingLabel={labels.loading}>{labels.submit}</SubmitButton>
+          <span className="hint">{labels.submitHint}</span>
         </div>
         {state.error ? (
           <div className="alert error" style={{ marginTop: 16, marginBottom: 0 }}>

@@ -22,7 +22,9 @@ export function renderDocx(
   try {
     doc.render(data as Record<string, unknown>)
   } catch (error: unknown) {
-    const e = error as { properties?: { errors?: { properties?: { explanation?: string } }[] } }
+    const e = error as {
+      properties?: { errors?: { properties?: { explanation?: string } }[] }
+    }
     const explanations =
       e.properties?.errors
         ?.map((err) => err.properties?.explanation)

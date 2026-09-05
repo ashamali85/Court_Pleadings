@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 import { audit } from '@/lib/audit'
 import db from '@/lib/db'
+import { getContent, translator } from '@/lib/content'
 import { env } from '@/lib/env'
 import { SESSION_COOKIE, sessionCookieOptions, signSession } from '@/lib/session'
 
@@ -17,7 +18,10 @@ const loginSchema = z.object({
   next: z.string().optional(),
 })
 
-export async function login(_prev: LoginState, formData: FormData): Promise<LoginState> {
+export async function login(
+  _prev: LoginState,
+  formData: FormData,
+): Promise<LoginState> {
   const parsed = loginSchema.safeParse({
     email: formData.get('email'),
     password: formData.get('password'),
@@ -31,7 +35,8 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
   const user = await db.user.findUnique({ where: { email } })
 
   // constant-ish work whether or not the account exists
-  const hash = user?.passwordHash ?? '$2b$10$invalidinvalidinvalidinvalidinvalidinvalidinvalidinv'
+  const hash =
+    user?.passwordHash ?? '$2b$10$invalidinvalidinvalidinvalidinvalidinvalidinvalidinv'
   const ok = await bcrypt.compare(password, hash)
 
   if (!user || !ok || !user.active) {
@@ -41,13 +46,19 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
       entity: 'User',
       entityId: user?.id ?? email,
     })
-    return { error: 'بيانات الدخول غير صحيحة أو الحساب غير مفعّل' }
+    const t = translator(await getContent())
+    return { error: t('message.loginFailed') }
   }
 
   const token = await signSession(user.id, env.JWT_SECRET)
   ;(await cookies()).set(SESSION_COOKIE, token, sessionCookieOptions)
 
-  await audit({ actorId: user.id, action: 'login.success', entity: 'User', entityId: user.id })
+  await audit({
+    actorId: user.id,
+    action: 'login.success',
+    entity: 'User',
+    entityId: user.id,
+  })
 
   const destination =
     next && next.startsWith('/') && !next.startsWith('//')

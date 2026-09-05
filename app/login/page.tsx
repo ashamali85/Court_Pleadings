@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import LoginForm from '@/app/login/login-form'
 import { getCurrentUser } from '@/lib/auth'
+import { getContent, translator } from '@/lib/content'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,6 +14,7 @@ export default async function LoginPage({
   if (user) redirect(user.role === 'ADMIN' ? '/admin' : '/requests')
 
   const { next } = await searchParams
+  const t = translator(await getContent())
 
   return (
     <>
@@ -20,8 +22,8 @@ export default async function LoginPage({
         <div className="topbar-inner">
           <div className="brand">
             <span>
-              مكتب المحاماة — نظام الطلبات
-              <small>تقديم طلبات الدعاوى وإصدار الصحف القانونية</small>
+              {t('common.appName')}
+              <small>{t('common.tagline')}</small>
             </span>
           </div>
         </div>
@@ -29,9 +31,17 @@ export default async function LoginPage({
       <main>
         <div className="auth-shell">
           <div className="card">
-            <h2>تسجيل الدخول</h2>
-            <p className="muted">أدخل بريدك الإلكتروني وكلمة المرور للمتابعة.</p>
-            <LoginForm next={next} />
+            <h2>{t('login.title')}</h2>
+            <p className="muted">{t('login.subtitle')}</p>
+            <LoginForm
+              next={next}
+              labels={{
+                email: t('login.email'),
+                password: t('login.password'),
+                submit: t('login.submit'),
+                loading: t('login.loading'),
+              }}
+            />
           </div>
         </div>
       </main>

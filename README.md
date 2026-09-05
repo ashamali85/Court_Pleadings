@@ -137,6 +137,43 @@ own document.
 
 ---
 
+## Editable site text (/admin/content)
+
+Every user-visible string — buttons, headers, table columns, field labels, the ؟
+hints, status names, validation messages — is a key in `lib/content/defaults.ts`.
+The admin screen at **/admin/content** lists them grouped and searchable, and
+saving writes a `SiteText` row only for the keys that differ from the built-in
+wording. Clearing a box (or typing the original text back) deletes the row and
+restores the default, so nothing can be permanently lost.
+
+Field and section labels for each case type are derived from its `TemplateDef`,
+so a new case type gets editable labels with no extra work. `getContent()` is
+React-cached per request, so a page rendering forty strings still makes one query,
+and if the table cannot be read the app falls back to the defaults rather than
+failing.
+
+## Client corrections
+
+When the lawyer returns a request he must give a reason (enforced server-side,
+not just by the browser). The client then sees that reason on their list with a
+**تعديل الطلب وإعادة إرساله** button, which opens the original form pre-filled at
+`/requests/[id]/edit`. Re-submitting sets the status back to قيد الانتظار, keeps
+the same reference number, and notifies the office. The edit route is owner-only
+and only opens while the request is in the REJECTED state.
+
+## UI conventions
+
+- Form sections are collapsible cards, collapsed by default. The whole header
+  strip is the toggle. Collapsed bodies stay mounted (hidden with CSS) so their
+  inputs still submit, and a section holding a validation error opens itself.
+- Guidance text sits behind a ؟ button beside each label, shown as a popover that
+  closes on a second click, on Escape, or on an outside click.
+- Every submitting button shows a spinner and a loading label while its action
+  runs (`components/submit-button.tsx`), and the other buttons in the same form
+  are disabled meanwhile.
+
+---
+
 ## Security notes
 
 - The JWT carries **only** the user id. Role and `active` are read from the

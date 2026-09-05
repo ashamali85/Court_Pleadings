@@ -5,22 +5,26 @@ import { useEffect, useId, useState } from 'react'
 /**
  * A card whose body collapses. Collapsed by default.
  *
- * The body stays MOUNTED and is hidden with CSS — unmounting it would drop the
- * inputs out of the form and they would never reach the server action. A section
- * that contains a validation error opens itself, so an error is never hidden
- * behind a closed header.
+ * The whole header strip is the button — its padding is the card's padding, so
+ * clicking anywhere on the header row (not just the text) toggles the section.
+ *
+ * The body stays MOUNTED and is hidden with CSS; unmounting it would drop the
+ * inputs out of the form and they would never reach the server action. A
+ * section holding a validation error opens itself.
  */
 export default function SectionCard({
   title,
   children,
   defaultOpen = false,
   hasError = false,
+  errorLabel = 'يحتاج تصحيحاً',
   badge,
 }: {
   title: string
   children: React.ReactNode
   defaultOpen?: boolean
   hasError?: boolean
+  errorLabel?: string
   badge?: string
 }) {
   const [open, setOpen] = useState(defaultOpen)
@@ -31,7 +35,7 @@ export default function SectionCard({
   }, [hasError])
 
   return (
-    <div className="card">
+    <div className="card collapsible">
       <button
         type="button"
         className="section-head"
@@ -41,7 +45,7 @@ export default function SectionCard({
       >
         <span>
           {title}
-          {hasError ? <span className="err-dot">يحتاج تصحيحاً</span> : null}
+          {hasError ? <span className="err-dot">{errorLabel}</span> : null}
           {!hasError && badge ? <span className="count-dot">{badge}</span> : null}
         </span>
         <span className="chev" aria-hidden="true">

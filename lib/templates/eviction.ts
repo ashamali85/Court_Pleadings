@@ -209,7 +209,8 @@ const fields: Record<string, FieldDef> = {
   include_penalty_clause: {
     name: 'include_penalty_clause',
     labelAr: 'هل تتضمن الصحيفة طلب الشرط الجزائي؟',
-    hintAr: 'يُطالَب بمبلغ مساوٍ لإجمالي الأجرة المتأخرة إعمالاً للبند السادس من العقد.',
+    hintAr:
+      'يُطالَب بمبلغ مساوٍ لإجمالي الأجرة المتأخرة إعمالاً للبند السادس من العقد.',
     type: 'boolean',
   },
 }
@@ -218,7 +219,10 @@ function computeMonths(from: number, to: number) {
   return to - from + 1
 }
 
-function derive(values: EvictionValues, overrides: Record<string, string> = {}): Placeholders {
+function derive(
+  values: EvictionValues,
+  overrides: Record<string, string> = {},
+): Placeholders {
   const months = computeMonths(values.arrears_from_month, values.arrears_to_month)
   const total = values.monthly_rent * months
 

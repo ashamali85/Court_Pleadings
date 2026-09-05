@@ -107,7 +107,9 @@ export function Field({
           {field.labelAr}
           {field.required ? ' *' : ''}
         </label>
-        {field.hintAr ? <HintButton text={field.hintAr} forLabel={field.labelAr} /> : null}
+        {field.hintAr ? (
+          <HintButton text={field.hintAr} forLabel={field.labelAr} />
+        ) : null}
       </div>
 
       {field.type === 'textarea' ? (

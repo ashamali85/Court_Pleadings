@@ -169,13 +169,20 @@ main {
 
 /* ---------- collapsible sections ---------- */
 
+/* the header button carries the card's padding, so the entire header strip —
+   not just the text — is clickable */
+.card.collapsible {
+  padding: 0;
+  overflow: hidden;
+}
+
 .section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   width: 100%;
-  padding: 0;
+  padding: 20px 24px;
   background: none;
   border: 0;
   font: inherit;
@@ -188,6 +195,7 @@ main {
 
 .section-head:hover {
   color: var(--brand);
+  background: var(--surface-2);
 }
 
 .section-head .chev {
@@ -201,9 +209,18 @@ main {
 }
 
 .section-body {
-  margin-top: 16px;
-  padding-top: 18px;
+  padding: 20px 24px 24px;
   border-top: 1px solid var(--line);
+}
+
+@media (max-width: 640px) {
+  .section-head {
+    padding: 16px 18px;
+  }
+
+  .section-body {
+    padding: 16px 18px 18px;
+  }
 }
 
 .err-dot,
@@ -422,6 +439,35 @@ select[disabled] {
   margin-top: 8px;
 }
 
+/* busy state for any submitting button */
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin 0.6s linear infinite;
+}
+
+.btn.secondary .spinner,
+.btn.danger .spinner {
+  border-color: rgba(10, 61, 145, 0.25);
+  border-top-color: var(--brand);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 1.6s;
+  }
+}
+
 /* ---------- feedback ---------- */
 
 .alert {
@@ -553,4 +599,23 @@ tbody tr:hover {
   .card {
     padding: 18px;
   }
+}
+
+.reject-note {
+  background: var(--danger-tint);
+  border: 1px solid rgba(199, 58, 58, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-top: 10px;
+  font-size: 13.5px;
+  line-height: 1.8;
+  max-width: 420px;
+  white-space: pre-wrap;
+}
+
+.content-key {
+  font-family: 'Inter', ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-weight: 500;
 }

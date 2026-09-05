@@ -94,7 +94,9 @@ function belowThousand(n: number, gc: GrammaticalCase): string {
   const rest = n % 100
 
   if (hundreds > 0) {
-    parts.push(gc === 'oblique' ? HUNDREDS_OBLIQUE[hundreds] : HUNDREDS_NOMINATIVE[hundreds])
+    parts.push(
+      gc === 'oblique' ? HUNDREDS_OBLIQUE[hundreds] : HUNDREDS_NOMINATIVE[hundreds],
+    )
   }
 
   if (rest > 0) {
@@ -119,7 +121,10 @@ function belowThousand(n: number, gc: GrammaticalCase): string {
 }
 
 /** 0 – 999,999,999 */
-export function numberToArabicWords(value: number, gc: GrammaticalCase = 'oblique'): string {
+export function numberToArabicWords(
+  value: number,
+  gc: GrammaticalCase = 'oblique',
+): string {
   const n = Math.floor(Math.abs(value))
   if (n === 0) return 'صفر'
 
@@ -131,14 +136,16 @@ export function numberToArabicWords(value: number, gc: GrammaticalCase = 'obliqu
   if (millions > 0) {
     if (millions === 1) parts.push('مليون')
     else if (millions === 2) parts.push(gc === 'oblique' ? 'مليونين' : 'مليونان')
-    else if (millions <= 10) parts.push(`${belowThousand(millions, 'nominative')} ملايين`)
+    else if (millions <= 10)
+      parts.push(`${belowThousand(millions, 'nominative')} ملايين`)
     else parts.push(`${belowThousand(millions, gc)} مليوناً`)
   }
 
   if (thousands > 0) {
     if (thousands === 1) parts.push('ألف')
     else if (thousands === 2) parts.push(gc === 'oblique' ? 'ألفين' : 'ألفان')
-    else if (thousands <= 10) parts.push(`${belowThousand(thousands, 'nominative')} آلاف`)
+    else if (thousands <= 10)
+      parts.push(`${belowThousand(thousands, 'nominative')} آلاف`)
     else parts.push(`${belowThousand(thousands, gc)} ألفاً`)
   }
 
