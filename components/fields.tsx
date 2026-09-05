@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FieldDef } from '@/lib/templates/types'
 
 type Values = Record<string, unknown>
@@ -9,6 +9,47 @@ function str(v: unknown): string {
   if (v === null || v === undefined) return ''
   if (typeof v === 'boolean') return v ? 'true' : ''
   return String(v)
+}
+
+/** Small ؟ button that reveals the field's guidance on click. */
+export function HintButton({ text, forLabel }: { text: string; forLabel: string }) {
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef<HTMLSpanElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+
+    const onPointerDown = (event: MouseEvent | TouchEvent) => {
+      if (!wrapRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('touchstart', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('touchstart', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
+
+  return (
+    <span className="hint-wrap" ref={wrapRef}>
+      <button
+        type="button"
+        className="hint-btn"
+        aria-expanded={open}
+        aria-label={`تعليمات حقل ${forLabel}`}
+        onClick={() => setOpen((v) => !v)}
+      >
+        ؟
+      </button>
+      {open ? <span className="hint-pop">{text}</span> : null}
+    </span>
+  )
 }
 
 export function Field({
@@ -38,9 +79,11 @@ export function Field({
             onChange={(e) => onChange(field.name, e.target.checked)}
             disabled={disabled}
           />
-          <div>
+          <div className="label-row">
             <label htmlFor={field.name}>{field.labelAr}</label>
-            {field.hintAr ? <div className="hint">{field.hintAr}</div> : null}
+            {field.hintAr ? (
+              <HintButton text={field.hintAr} forLabel={field.labelAr} />
+            ) : null}
           </div>
         </div>
         {error ? <div className="field-error">{error}</div> : null}
@@ -59,11 +102,13 @@ export function Field({
 
   return (
     <div className="field">
-      <label htmlFor={field.name}>
-        {field.labelAr}
-        {field.required ? ' *' : ''}
-      </label>
-      {field.hintAr ? <div className="hint">{field.hintAr}</div> : null}
+      <div className="label-row">
+        <label htmlFor={field.name}>
+          {field.labelAr}
+          {field.required ? ' *' : ''}
+        </label>
+        {field.hintAr ? <HintButton text={field.hintAr} forLabel={field.labelAr} /> : null}
+      </div>
 
       {field.type === 'textarea' ? (
         <textarea

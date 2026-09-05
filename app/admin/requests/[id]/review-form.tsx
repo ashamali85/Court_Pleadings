@@ -2,6 +2,7 @@
 
 import { useActionState, useRef } from 'react'
 import { rejectRequest, submitReview, type ReviewState } from '@/app/admin/actions'
+import SectionCard from '@/components/collapsible'
 import { Field, useFieldValues } from '@/components/fields'
 import type { SectionDef } from '@/lib/templates/types'
 
@@ -49,6 +50,8 @@ export default function ReviewForm({
     if (intentRef.current) intentRef.current.value = intent
   }
 
+  const overrideCount = Object.keys(overrides).length
+
   return (
     <>
       <form action={action}>
@@ -67,45 +70,46 @@ export default function ReviewForm({
           </div>
         ) : null}
 
-        {sections.map((section) => (
-          <div className="card" key={section.key}>
-            <div className="section-title">{section.titleAr}</div>
-            {section.key === 'arrears' ? (
-              <>
-                <Field
-                  field={section.fields[0]}
-                  values={values}
-                  errors={errors}
-                  onChange={onChange}
-                />
-                <div className="row">
-                  {section.fields.slice(1).map((field) => (
-                    <Field
-                      key={field.name}
-                      field={field}
-                      values={values}
-                      errors={errors}
-                      onChange={onChange}
-                    />
-                  ))}
-                </div>
-              </>
-            ) : (
-              section.fields.map((field) => (
-                <Field
-                  key={field.name}
-                  field={field}
-                  values={values}
-                  errors={errors}
-                  onChange={onChange}
-                />
-              ))
-            )}
-          </div>
-        ))}
+        {sections.map((section) => {
+          const hasError = section.fields.some((f) => Boolean(errors[f.name]))
+          return (
+            <SectionCard key={section.key} title={section.titleAr} hasError={hasError}>
+              {section.key === 'arrears' ? (
+                <>
+                  <Field
+                    field={section.fields[0]}
+                    values={values}
+                    errors={errors}
+                    onChange={onChange}
+                  />
+                  <div className="row">
+                    {section.fields.slice(1).map((field) => (
+                      <Field
+                        key={field.name}
+                        field={field}
+                        values={values}
+                        errors={errors}
+                        onChange={onChange}
+                      />
+                    ))}
+                  </div>
+                </>
+              ) : (
+                section.fields.map((field) => (
+                  <Field
+                    key={field.name}
+                    field={field}
+                    values={values}
+                    errors={errors}
+                    onChange={onChange}
+                  />
+                ))
+              )}
+            </SectionCard>
+          )
+        })}
 
-        <div className="card tinted">
-          <div className="section-title">النص المحتسب تلقائياً</div>
+        <SectionCard title="النص المحتسب تلقائياً">
           <p className="muted">
             هذه القيم تُحسب من الحقول أعلاه وتُكتب في الصحيفة. حدّث الصفحة بعد الحفظ
             لإعادة احتسابها، أو تجاوزها يدوياً من القسم التالي.
@@ -118,13 +122,13 @@ export default function ReviewForm({
               </div>
             ))}
           </dl>
-        </div>
+        </SectionCard>
 
-        <div className="card">
-          <div className="section-title">تجاوز يدوي (اختياري)</div>
-          <p className="muted">
-            اترك الحقل فارغاً للإبقاء على القيمة المحتسبة تلقائياً.
-          </p>
+        <SectionCard
+          title="تجاوز يدوي (اختياري)"
+          badge={overrideCount > 0 ? `${overrideCount} تجاوز` : undefined}
+        >
+          <p className="muted">اترك الحقل فارغاً للإبقاء على القيمة المحتسبة تلقائياً.</p>
           <div className="row">
             {overridable.map((item) => (
               <div className="field" key={item.name}>
@@ -139,10 +143,10 @@ export default function ReviewForm({
               </div>
             ))}
           </div>
-        </div>
+        </SectionCard>
 
         <div className="card">
-          <div className="section-title">ملاحظة المحامي</div>
+          <div className="section-title">ملاحظة المحامي وإصدار الصحيفة</div>
           <div className="field">
             <textarea name="lawyerNote" rows={3} defaultValue={lawyerNote} />
           </div>
@@ -173,24 +177,24 @@ export default function ReviewForm({
           ) : null}
           {state.ok && state.documentId ? (
             <div className="alert ok" style={{ marginTop: 16, marginBottom: 0 }}>
-              {state.ok}{' '}
-              <a href={`/api/documents/${state.documentId}`}>تحميل الملف</a>
+              {state.ok} <a href={`/api/documents/${state.documentId}`}>تحميل الملف</a>
             </div>
           ) : null}
         </div>
       </form>
 
-      <form action={rejectRequest} className="card">
-        <input type="hidden" name="requestId" value={requestId} />
-        <div className="section-title">إعادة الطلب للعميل</div>
-        <div className="field">
-          <label htmlFor="rejectNote">سبب الإعادة</label>
-          <textarea id="rejectNote" name="lawyerNote" rows={2} required />
-        </div>
-        <button className="btn danger" type="submit">
-          إعادة الطلب للعميل
-        </button>
-      </form>
+      <SectionCard title="إعادة الطلب للعميل">
+        <form action={rejectRequest}>
+          <input type="hidden" name="requestId" value={requestId} />
+          <div className="field">
+            <label htmlFor="rejectNote">سبب الإعادة</label>
+            <textarea id="rejectNote" name="lawyerNote" rows={2} required />
+          </div>
+          <button className="btn danger" type="submit">
+            إعادة الطلب للعميل
+          </button>
+        </form>
+      </SectionCard>
     </>
   )
 }
