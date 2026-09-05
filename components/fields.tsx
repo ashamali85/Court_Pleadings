@@ -106,7 +106,7 @@ export function Field({
       <div className="label-row">
         <label htmlFor={field.name}>
           {field.labelAr}
-          {field.required ? ' *' : ''}
+          {field.required ? <span className="req">*</span> : null}
         </label>
         {field.hintAr ? (
           <HintButton text={field.hintAr} forLabel={field.labelAr} />

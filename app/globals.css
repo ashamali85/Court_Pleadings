@@ -255,7 +255,7 @@ main {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 6px;
+  margin-bottom: 7px;
 }
 
 .label-row label {
@@ -312,13 +312,23 @@ main {
 /* ---------- forms ---------- */
 
 .field {
-  margin-bottom: 18px;
+  margin-bottom: 24px;
 }
 
+/* label = caption: smaller, secondary colour, sits tight to its own control.
+   value = content: full-contrast ink, larger. The value wins the hierarchy. */
 .field label {
   display: block;
+  font-size: 13.5px;
   font-weight: 600;
-  margin-bottom: 6px;
+  color: var(--ink-soft);
+  margin-bottom: 7px;
+  letter-spacing: 0.1px;
+}
+
+.field .req {
+  color: var(--brand-2);
+  margin-inline-start: 2px;
 }
 
 .field .hint {
@@ -334,13 +344,22 @@ input[type='number'],
 textarea,
 select {
   width: 100%;
-  padding: 11px 14px;
+  padding: 12px 14px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--ink);
   font: inherit;
+  font-size: 15.5px;
+  font-weight: 500;
   transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--ink-soft);
+  font-weight: 400;
+  opacity: 0.75;
 }
 
 textarea {
@@ -382,7 +401,9 @@ select[disabled] {
 
 .checkbox label {
   margin: 0;
+  font-size: 14.5px;
   font-weight: 600;
+  color: var(--ink);
 }
 
 .row {
@@ -703,7 +724,9 @@ tbody tr:hover {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 11px 14px;
+  padding: 12px 14px;
+  font-size: 15.5px;
+  font-weight: 500;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--surface);
