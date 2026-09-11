@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import ReviewForm from '@/app/admin/requests/[id]/review-form'
+import { SuccessArt } from '@/components/brand'
 import Topbar from '@/components/topbar'
 import { requireAdmin } from '@/lib/auth'
 import {
@@ -94,7 +95,12 @@ export default async function ReviewRequestPage({
 
           {request.documents.length > 0 ? (
             <div className="card">
-              <div className="section-title">{t('admin.review.docsTitle')}</div>
+              <div className="docs-head">
+                <SuccessArt className="docs-art" />
+                <div className="section-title" style={{ flex: 1, marginBottom: 0 }}>
+                  {t('admin.review.docsTitle')}
+                </div>
+              </div>
               <table>
                 <thead>
                   <tr>

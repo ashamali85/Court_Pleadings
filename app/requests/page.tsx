@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { EmptyArt } from '@/components/brand'
 import Topbar from '@/components/topbar'
 import { requireUser } from '@/lib/auth'
 import { getContent, templateName, translator } from '@/lib/content'
@@ -48,7 +49,10 @@ export default async function MyRequestsPage({
 
           <div className="card">
             {requests.length === 0 ? (
-              <div className="empty">{t('client.list.empty')}</div>
+              <div className="empty">
+                <EmptyArt className="empty-art" />
+                <p>{t('client.list.empty')}</p>
+              </div>
             ) : (
               <table>
                 <thead>

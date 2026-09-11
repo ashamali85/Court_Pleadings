@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import LoginForm from '@/app/login/login-form'
 import { getCurrentUser } from '@/lib/auth'
+import { SkylineArt } from '@/components/brand'
 import { getContent, translator } from '@/lib/content'
 
 export const dynamic = 'force-dynamic'
@@ -18,19 +19,16 @@ export default async function LoginPage({
 
   return (
     <>
-      <header className="topbar">
-        <div className="topbar-inner">
-          <div className="brand">
-            <span>
-              {t('common.appName')}
-              <small>{t('common.tagline')}</small>
-            </span>
-          </div>
-        </div>
-      </header>
-      <main>
-        <div className="auth-shell">
-          <div className="card">
+      <main className="auth-main">
+        <div className="auth-split">
+          <aside className="auth-art">
+            <SkylineArt className="auth-skyline" />
+            <div className="auth-art-copy">
+              <strong>{t('common.appName')}</strong>
+              <span>{t('common.tagline')}</span>
+            </div>
+          </aside>
+          <div className="auth-form">
             <h2>{t('login.title')}</h2>
             <p className="muted">{t('login.subtitle')}</p>
             <LoginForm

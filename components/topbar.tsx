@@ -17,6 +17,7 @@ export default function Topbar({
     <header className="topbar">
       <div className="topbar-inner">
         <div className="brand">
+          <img src="/brand/logo.png" alt="" className="brand-mark" />
           <span>
             {t('common.appName')}
             <small>

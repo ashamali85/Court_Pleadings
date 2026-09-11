@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { EmptyArt } from '@/components/brand'
 import Topbar from '@/components/topbar'
 import { requireAdmin } from '@/lib/auth'
 import { getContent, templateName, translator } from '@/lib/content'
@@ -40,7 +41,10 @@ export default async function AdminInbox() {
 
           <div className="card">
             {requests.length === 0 ? (
-              <div className="empty">{t('admin.inbox.empty')}</div>
+              <div className="empty">
+                <EmptyArt className="empty-art" />
+                <p>{t('admin.inbox.empty')}</p>
+              </div>
             ) : (
               <table>
                 <thead>
