@@ -50,7 +50,12 @@ a:hover {
 /* ---------- layout ---------- */
 
 .topbar {
-  background: linear-gradient(135deg, var(--brand-dark), var(--brand) 55%, var(--brand-2));
+  background: linear-gradient(
+    135deg,
+    var(--brand-dark),
+    var(--brand) 55%,
+    var(--brand-2)
+  );
   color: #fff;
   padding: 16px 0;
   box-shadow: 0 8px 24px rgba(10, 46, 102, 0.18);
@@ -352,7 +357,9 @@ select {
   font: inherit;
   font-size: 15.5px;
   font-weight: 500;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 input::placeholder,
@@ -679,7 +686,12 @@ tbody tr:hover {
 .loading-bar {
   height: 14px;
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--brand-dark), var(--brand) 60%, var(--brand-2));
+  background: linear-gradient(
+    135deg,
+    var(--brand-dark),
+    var(--brand) 60%,
+    var(--brand-2)
+  );
   position: relative;
   overflow: hidden;
 }
@@ -933,7 +945,12 @@ input[type='number'] {
 .auth-art {
   position: relative;
   min-height: 460px;
-  background: linear-gradient(160deg, var(--brand-dark), var(--brand) 60%, var(--brand-2));
+  background: linear-gradient(
+    160deg,
+    var(--brand-dark),
+    var(--brand) 60%,
+    var(--brand-2)
+  );
 }
 
 .auth-skyline {
@@ -949,12 +966,122 @@ input[type='number'] {
   position: absolute;
   inset-inline: 0;
   bottom: 0;
-  height: 260px;
-  background: linear-gradient(
-    to top,
-    rgba(12, 47, 107, 0.96) 30%,
-    rgba(12, 47, 107, 0)
-  );
+  height: 170px;
+  background: linear-gradient(to top, rgba(4, 12, 32, 0.94) 24%, rgba(4, 12, 32, 0));
+  pointer-events: none;
+}
+
+/* --- animated login skyline ------------------------------------------- */
+
+@keyframes sky-twinkle {
+  0%,
+  100% {
+    opacity: 0.12;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes sky-sweep {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-330px);
+    opacity: 0;
+  }
+}
+
+@keyframes sky-grid {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(26px);
+  }
+}
+
+@keyframes sky-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes sky-beacon {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.sky-star {
+  animation: sky-twinkle 4s ease-in-out infinite;
+}
+
+.sky-sweep {
+  animation: sky-sweep 6.5s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+}
+
+.sky-grid-flow {
+  animation: sky-grid 2.4s linear infinite;
+}
+
+.sky-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sky-pulse 8s ease-in-out infinite;
+}
+
+.sky-beacon {
+  animation: sky-beacon 2.2s ease-in-out infinite;
+}
+
+.sky-beacon-b {
+  animation-duration: 3.1s;
+  animation-delay: 0.6s;
+}
+
+.flag-still {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sky-star,
+  .sky-grid-flow,
+  .sky-pulse,
+  .sky-beacon {
+    animation: none;
+  }
+
+  .sky-sweep {
+    animation: none;
+    opacity: 0;
+  }
+
+  .flag-wave {
+    display: none;
+  }
+
+  .flag-still {
+    display: block;
+  }
 }
 
 .auth-art-copy {
@@ -1033,7 +1160,7 @@ input[type='number'] {
   }
 
   .auth-art {
-    min-height: 210px;
+    min-height: 300px;
   }
 
   .auth-form {
