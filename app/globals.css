@@ -1,22 +1,127 @@
+/* =========================================================================
+   Design tokens
+
+   Tier 1 — literals:  the only place a raw colour or number is written.
+   Tier 2 — scales:    spacing, type, radius, motion. Whole pixels only.
+   Tier 3 — semantic:  what the rules below actually reference.
+
+   Three rules keep this honest:
+     1. no literal value appears outside tier 1;
+     2. every transition names a --dur-* and an --ease-*;
+     3. reduced motion is handled once, globally, at the end of this block.
+   ========================================================================= */
+
 :root {
-  --bg: #eef5fb;
-  --surface: #ffffff;
-  --surface-2: #f6f9fc;
-  --ink: #10284f;
-  --ink-soft: #64748b;
-  --line: rgba(10, 46, 102, 0.12);
-  --brand: #0a3d91;
-  --brand-dark: #0c2f6b;
-  --brand-2: #1b67d5;
-  --brand-tint: #edf4ff;
-  --danger: #c73a3a;
-  --danger-tint: #fdecec;
-  --ok: #12805c;
-  --warn-tint: #fff3e8;
-  --warn-ink: #b7791f;
-  --radius: 20px;
-  --radius-sm: 12px;
+  /* --- tier 1: literals -------------------------------------------- */
+  --blue-90: #0c2f6b;
+  --blue-70: #0a3d91;
+  --blue-50: #1b67d5;
+  --blue-10: #edf4ff;
+  --slate-90: #10284f;
+  --slate-50: #526484; /* was #64748b — 4.33:1 on the app ground, now 5.43:1 */
+  --slate-10: #f6f9fc;
+  --slate-05: #eef5fb;
+  --white: #ffffff;
+  --red-60: #a3262a;
+  --red-10: #fdeceb;
+  --amber-70: #8a5a00;
+  --amber-10: #fdf2df;
+  --green-70: #0f6b4f;
+  --green-10: #e4f3ed;
+
+  /* alpha literals: these sit over tinted surfaces, so they stay translucent */
+  --alpha-line: rgba(10, 46, 102, 0.12);
+  --alpha-ink-05: rgba(10, 46, 102, 0.05);
+  --alpha-ink-10: rgba(10, 46, 102, 0.1);
+  --alpha-ink-18: rgba(10, 46, 102, 0.18);
+  --alpha-ink-28: rgba(10, 46, 102, 0.28);
+  --alpha-scrim: rgba(16, 40, 79, 0.32);
+  --alpha-on-brand-12: rgba(255, 255, 255, 0.12);
+  --alpha-on-brand-22: rgba(255, 255, 255, 0.22);
+  --alpha-on-brand-38: rgba(255, 255, 255, 0.38);
+  --alpha-on-brand-40: rgba(255, 255, 255, 0.4);
+  --alpha-on-brand-0: rgba(255, 255, 255, 0);
+  --alpha-danger-line: rgba(163, 38, 42, 0.25);
+  --alpha-night: rgba(4, 12, 32, 0.94);
+  --alpha-night-0: rgba(4, 12, 32, 0);
+
+  /* --- tier 2: scales ---------------------------------------------- */
+  --space-hair: 2px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-md: 15px; /* body, and the value inside every input */
+  --text-lg: 17px;
+  --text-xl: 20px;
+  --text-2xl: 25px;
+
+  --leading-tight: 1.3;
+  --leading-body: 1.8; /* Arabic needs the room */
+  --leading-loose: 1.9;
+  --leading-doc: 2.1; /* the generated-text preview */
+
+  --weight-regular: 400;
+  --weight-medium: 600;
+  --weight-bold: 700;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+  --radius-circle: 50%;
+
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
   --font: 'Cairo', 'Inter', 'Segoe UI', Tahoma, Arial, sans-serif;
+  --font-latin: 'Inter', system-ui, sans-serif;
+  --font-mono: 'Inter', ui-monospace, monospace;
+
+  /* --- tier 3: semantic roles -------------------------------------- */
+  --bg: var(--slate-05);
+  --surface: var(--white);
+  --surface-2: var(--slate-10);
+  --surface-raised: var(--blue-10);
+
+  --ink: var(--slate-90);
+  --ink-soft: var(--slate-50);
+  --ink-on-brand: var(--white);
+
+  --line: var(--alpha-line);
+  --brand: var(--blue-70);
+  --brand-dark: var(--blue-90);
+  --brand-2: var(--blue-50);
+  --brand-tint: var(--blue-10);
+
+  --focus-ring: var(--blue-50); /* 5.3:1 on white — an outline, not a tint */
+
+  --danger: var(--red-60);
+  --danger-tint: var(--red-10);
+  --danger-line: var(--alpha-danger-line);
+  --warn-ink: var(--amber-70);
+  --warn-tint: var(--amber-10);
+  --ok: var(--green-70);
+  --ok-tint: var(--green-10);
+
+  --shadow-1: 0 2px 10px var(--alpha-ink-05);
+  --shadow-2: 0 10px 28px var(--alpha-ink-10);
+  --shadow-3: 0 14px 36px var(--alpha-ink-18);
+  --shadow-4: 0 20px 50px var(--alpha-ink-28);
+  --shadow-topbar: 0 8px 24px var(--alpha-ink-18);
+
+  /* legacy aliases — the old names still resolve while anything references them */
+  --radius: var(--radius-lg);
 }
 
 * {
@@ -33,8 +138,8 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font);
-  font-size: 15px;
-  line-height: 1.8;
+  font-size: var(--text-md);
+  line-height: var(--leading-body);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -47,6 +152,18 @@ a:hover {
   text-decoration: underline;
 }
 
+/* ---------- focus, globally ----------
+
+   One rule for every focusable thing in the app. :focus-visible, so a mouse
+   click does not paint a ring; outline rather than box-shadow, so it survives
+   Windows High Contrast mode. */
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
 /* ---------- layout ---------- */
 
 .topbar {
@@ -56,68 +173,72 @@ a:hover {
     var(--brand) 55%,
     var(--brand-2)
   );
-  color: #fff;
-  padding: 16px 0;
-  box-shadow: 0 8px 24px rgba(10, 46, 102, 0.18);
+  color: var(--ink-on-brand);
+  padding: var(--space-4) 0;
+  box-shadow: var(--shadow-topbar);
 }
 
 .topbar-inner,
 .container {
   max-width: 1080px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 var(--space-5);
 }
 
 .topbar-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--space-4);
   flex-wrap: wrap;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-weight: 700;
-  font-size: 19px;
+  gap: var(--space-3);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-xl);
 }
 
 .brand small {
   display: block;
-  font-weight: 400;
-  font-size: 12px;
+  font-weight: var(--weight-regular);
+  font-size: var(--text-xs);
   opacity: 0.82;
 }
 
 .topbar nav {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
 .topbar nav a,
 .topbar nav button {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 999px;
-  padding: 7px 16px;
+  color: var(--ink-on-brand);
+  background: var(--alpha-on-brand-12);
+  border: 1px solid var(--alpha-on-brand-22);
+  border-radius: var(--radius-pill);
+  padding: var(--space-2) var(--space-4);
   font: inherit;
-  font-size: 14px;
+  font-size: var(--text-sm);
   cursor: pointer;
 }
 
 .topbar nav a:hover,
 .topbar nav button:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--alpha-on-brand-22);
   text-decoration: none;
 }
 
+.topbar nav :focus-visible {
+  outline-color: var(--ink-on-brand);
+}
+
 main {
-  padding: 28px 0 64px;
+  padding: var(--space-6) 0 var(--space-8);
 }
 
 /* ---------- surfaces ---------- */
@@ -125,10 +246,10 @@ main {
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 24px;
-  box-shadow: 0 2px 10px rgba(10, 46, 102, 0.04);
-  margin-bottom: 20px;
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-1);
+  margin-bottom: var(--space-5);
 }
 
 .card.tinted {
@@ -136,8 +257,8 @@ main {
 }
 
 .card h2 {
-  margin: 0 0 4px;
-  font-size: 18px;
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-lg);
 }
 
 .card h2 + .muted {
@@ -148,27 +269,30 @@ main {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--space-4);
   flex-wrap: wrap;
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5);
 }
 
 .page-head h1 {
   margin: 0;
-  font-size: 24px;
+  font-size: var(--text-2xl);
+  line-height: var(--leading-tight);
 }
 
+/* secondary prose: body size, softer colour — the colour is the signal, not a
+   smaller type size */
 .muted {
   color: var(--ink-soft);
-  font-size: 14px;
-  margin: 4px 0 16px;
+  font-size: var(--text-md);
+  margin: var(--space-1) 0 var(--space-4);
 }
 
 .section-title {
-  font-size: 16px;
-  font-weight: 700;
-  margin: 0 0 14px;
-  padding-bottom: 10px;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  margin: 0 0 var(--space-3);
+  padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--line);
 }
 
@@ -185,22 +309,22 @@ main {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   width: 100%;
-  padding: 20px 24px;
+  padding: var(--space-5);
   background: none;
   border: 0;
   font: inherit;
-  font-weight: 700;
-  font-size: 16px;
+  font-weight: var(--weight-bold);
+  font-size: var(--text-lg);
   color: var(--ink);
   text-align: start;
   cursor: pointer;
-  border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
+  border-radius: calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px) 0 0;
 }
 
 .section-head[aria-expanded='false'] {
-  border-radius: calc(var(--radius) - 1px);
+  border-radius: calc(var(--radius-lg) - 1px);
 }
 
 .section-head:hover {
@@ -210,8 +334,8 @@ main {
 
 .section-head .chev {
   color: var(--brand-2);
-  font-size: 13px;
-  transition: transform 0.18s ease;
+  font-size: var(--text-sm);
+  transition: transform var(--dur-base) var(--ease-out);
 }
 
 .section-head[aria-expanded='true'] .chev {
@@ -219,28 +343,28 @@ main {
 }
 
 .section-body {
-  padding: 20px 24px 24px;
+  padding: var(--space-5) var(--space-5) var(--space-5);
   border-top: 1px solid var(--line);
 }
 
 @media (max-width: 640px) {
   .section-head {
-    padding: 16px 18px;
+    padding: var(--space-4);
   }
 
   .section-body {
-    padding: 16px 18px 18px;
+    padding: var(--space-4);
   }
 }
 
 .err-dot,
 .count-dot {
   display: inline-block;
-  border-radius: 999px;
-  padding: 2px 10px;
-  margin-inline-start: 10px;
-  font-size: 12px;
-  font-weight: 600;
+  border-radius: var(--radius-pill);
+  padding: var(--space-hair) var(--space-3);
+  margin-inline-start: var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
   vertical-align: middle;
 }
 
@@ -259,8 +383,8 @@ main {
 .label-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 7px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 .label-row label {
@@ -273,16 +397,16 @@ main {
 }
 
 .hint-btn {
-  width: 20px;
-  height: 20px;
+  width: var(--space-5);
+  height: var(--space-5);
   padding: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   border: 1px solid var(--line);
   background: var(--brand-tint);
   color: var(--brand);
   font: inherit;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
   line-height: 1;
   cursor: pointer;
   display: inline-flex;
@@ -293,53 +417,53 @@ main {
 .hint-btn:hover,
 .hint-btn[aria-expanded='true'] {
   background: var(--brand);
-  color: #fff;
+  color: var(--ink-on-brand);
   border-color: var(--brand);
 }
 
 .hint-pop {
   position: absolute;
-  top: 28px;
-  inset-inline-start: -6px;
+  top: var(--space-6);
+  inset-inline-start: calc(var(--space-2) * -1);
   z-index: 30;
   width: min(300px, 78vw);
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 10px 28px rgba(10, 46, 102, 0.16);
-  padding: 12px 14px;
-  font-size: 13px;
-  font-weight: 400;
-  line-height: 1.75;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-loose);
   color: var(--ink-soft);
 }
 
 /* ---------- forms ---------- */
 
 .field {
-  margin-bottom: 24px;
+  margin-bottom: var(--space-5);
 }
 
 /* label = caption: smaller, secondary colour, sits tight to its own control.
    value = content: full-contrast ink, larger. The value wins the hierarchy. */
 .field label {
   display: block;
-  font-size: 13.5px;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
   color: var(--ink-soft);
-  margin-bottom: 7px;
+  margin-bottom: var(--space-2);
   letter-spacing: 0.1px;
 }
 
 .field .req {
   color: var(--brand-2);
-  margin-inline-start: 2px;
+  margin-inline-start: var(--space-hair);
 }
 
 .field .hint {
   color: var(--ink-soft);
-  font-size: 13px;
-  margin-bottom: 8px;
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-2);
 }
 
 input[type='text'],
@@ -349,37 +473,44 @@ input[type='number'],
 textarea,
 select {
   width: 100%;
-  padding: 12px 14px;
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--ink);
   font: inherit;
-  font-size: 15.5px;
-  font-weight: 500;
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
   transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
 }
 
 input::placeholder,
 textarea::placeholder {
   color: var(--ink-soft);
-  font-weight: 400;
-  opacity: 0.75;
+  font-weight: var(--weight-regular);
 }
 
 textarea {
   resize: vertical;
-  line-height: 1.9;
+  line-height: var(--leading-loose);
 }
 
 input:focus,
 textarea:focus,
 select:focus {
-  outline: none;
   border-color: var(--brand-2);
-  box-shadow: 0 0 0 3px var(--brand-tint);
+}
+
+/* the invalid state belongs on the control, and only after the user has
+   actually interacted with it — :user-invalid, not :invalid */
+input:user-invalid,
+textarea:user-invalid,
+select:user-invalid,
+[aria-invalid='true'] {
+  border-color: var(--danger);
+  background: var(--danger-tint);
 }
 
 input[disabled],
@@ -392,37 +523,37 @@ select[disabled] {
 .checkbox {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: var(--space-3);
   background: var(--brand-tint);
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
 }
 
 .checkbox input {
-  width: 18px;
-  height: 18px;
-  margin-top: 4px;
+  width: var(--space-5);
+  height: var(--space-5);
+  margin-top: var(--space-hair);
   accent-color: var(--brand);
 }
 
 .checkbox label {
   margin: 0;
-  font-size: 14.5px;
-  font-weight: 600;
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
   color: var(--ink);
 }
 
 .row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .field-error {
   color: var(--danger);
-  font-size: 13px;
-  margin-top: 6px;
+  font-size: var(--text-sm);
+  margin-top: var(--space-2);
 }
 
 /* ---------- buttons ---------- */
@@ -431,15 +562,16 @@ select[disabled] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-2);
   border: 1px solid transparent;
-  border-radius: 999px;
-  padding: 11px 22px;
+  border-radius: var(--radius-pill);
+  padding: var(--space-3) var(--space-5);
   font: inherit;
-  font-weight: 600;
+  font-weight: var(--weight-medium);
   cursor: pointer;
   background: linear-gradient(135deg, var(--brand), var(--brand-2));
-  color: #fff;
+  color: var(--ink-on-brand);
+  transition: filter var(--dur-fast) var(--ease-out);
 }
 
 .btn:hover {
@@ -461,31 +593,31 @@ select[disabled] {
 .btn.danger {
   background: var(--danger-tint);
   color: var(--danger);
-  border-color: rgba(199, 58, 58, 0.25);
+  border-color: var(--danger-line);
 }
 
 .actions {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
   align-items: center;
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 /* busy state for any submitting button */
 .spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.4);
-  border-top-color: #fff;
-  border-radius: 50%;
+  width: var(--space-4);
+  height: var(--space-4);
+  border: 2px solid var(--alpha-on-brand-40);
+  border-top-color: var(--white);
+  border-radius: var(--radius-circle);
   display: inline-block;
   animation: spin 0.6s linear infinite;
 }
 
 .btn.secondary .spinner,
 .btn.danger .spinner {
-  border-color: rgba(10, 61, 145, 0.25);
+  border-color: var(--alpha-ink-18);
   border-top-color: var(--brand);
 }
 
@@ -495,19 +627,13 @@ select[disabled] {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .spinner {
-    animation-duration: 1.6s;
-  }
-}
-
 /* ---------- feedback ---------- */
 
 .alert {
-  border-radius: var(--radius-sm);
-  padding: 12px 16px;
-  margin-bottom: 18px;
-  font-size: 14px;
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  font-size: var(--text-md);
 }
 
 .alert.error {
@@ -516,7 +642,7 @@ select[disabled] {
 }
 
 .alert.ok {
-  background: #e7f6f0;
+  background: var(--ok-tint);
   color: var(--ok);
 }
 
@@ -535,15 +661,15 @@ table {
 th,
 td {
   text-align: right;
-  padding: 12px 10px;
+  padding: var(--space-3);
   border-bottom: 1px solid var(--line);
   vertical-align: top;
 }
 
 th {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--ink-soft);
-  font-weight: 600;
+  font-weight: var(--weight-medium);
 }
 
 tbody tr:hover {
@@ -552,10 +678,10 @@ tbody tr:hover {
 
 .badge {
   display: inline-block;
-  border-radius: 999px;
-  padding: 3px 12px;
-  font-size: 12.5px;
-  font-weight: 600;
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
   white-space: nowrap;
 }
 
@@ -570,7 +696,7 @@ tbody tr:hover {
 }
 
 .badge.generated {
-  background: #e7f6f0;
+  background: var(--ok-tint);
   color: var(--ok);
 }
 
@@ -580,9 +706,11 @@ tbody tr:hover {
 }
 
 .ref {
-  font-family: 'Inter', ui-monospace, monospace;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   direction: ltr;
   display: inline-block;
+  white-space: nowrap;
 }
 
 /* ---------- misc ---------- */
@@ -590,21 +718,21 @@ tbody tr:hover {
 .preview {
   background: var(--surface-2);
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 16px;
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
   white-space: pre-wrap;
-  line-height: 2.1;
+  line-height: var(--leading-doc);
 }
 
 .kv {
   display: grid;
   grid-template-columns: 220px 1fr;
-  gap: 10px 16px;
+  gap: var(--space-3) var(--space-4);
 }
 
 .kv dt {
   color: var(--ink-soft);
-  font-size: 14px;
+  font-size: var(--text-sm);
 }
 
 .kv dd {
@@ -615,42 +743,42 @@ tbody tr:hover {
 .empty {
   text-align: center;
   color: var(--ink-soft);
-  padding: 40px 0;
+  padding: var(--space-7) 0;
 }
 
 .auth-shell {
   max-width: 440px;
-  margin: 56px auto;
+  margin: var(--space-7) auto;
 }
 
 @media (max-width: 640px) {
   .kv {
     grid-template-columns: 1fr;
-    gap: 2px 0;
+    gap: var(--space-hair) 0;
   }
 
   .card {
-    padding: 18px;
+    padding: var(--space-4);
   }
 }
 
 .reject-note {
   background: var(--danger-tint);
-  border: 1px solid rgba(199, 58, 58, 0.2);
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
-  margin-top: 10px;
-  font-size: 13.5px;
-  line-height: 1.8;
+  border: 1px solid var(--danger-line);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin-top: var(--space-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
   max-width: 420px;
   white-space: pre-wrap;
 }
 
 .content-key {
-  font-family: 'Inter', ui-monospace, monospace;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
   color: var(--ink-soft);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 
 /* ---------- busy overlay ---------- */
@@ -662,30 +790,30 @@ tbody tr:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(16, 40, 79, 0.32);
+  background: var(--alpha-scrim);
   backdrop-filter: blur(2px);
 }
 
 .loading-card {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
-  box-shadow: 0 20px 50px rgba(10, 46, 102, 0.28);
-  padding: 24px 34px 26px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-4);
+  padding: var(--space-5) var(--space-6) var(--space-6);
   min-width: min(320px, 84vw);
   text-align: center;
 }
 
 .loading-title {
-  font-weight: 700;
-  font-size: 16px;
+  font-weight: var(--weight-bold);
+  font-size: var(--text-lg);
   color: var(--brand-dark);
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .loading-bar {
-  height: 14px;
-  border-radius: 999px;
+  height: var(--space-4);
+  border-radius: var(--radius-pill);
   background: linear-gradient(
     135deg,
     var(--brand-dark),
@@ -702,8 +830,8 @@ tbody tr:hover {
   inset: 0;
   background-image: repeating-linear-gradient(
     -45deg,
-    rgba(255, 255, 255, 0.38) 0 8px,
-    rgba(255, 255, 255, 0) 8px 18px
+    var(--alpha-on-brand-38) 0 8px,
+    var(--alpha-on-brand-0) 8px 18px
   );
   background-size: 26px 26px;
   animation: barber 0.75s linear infinite;
@@ -718,12 +846,6 @@ tbody tr:hover {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .loading-bar::after {
-    animation-duration: 3s;
-  }
-}
-
 /* ---------- date field ---------- */
 
 .date-wrap {
@@ -735,17 +857,18 @@ tbody tr:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 12px 14px;
-  font-size: 15.5px;
-  font-weight: 500;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--ink);
   font: inherit;
   cursor: pointer;
   text-align: start;
+  transition: border-color var(--dur-fast) var(--ease-out);
 }
 
 .date-trigger:hover:not(:disabled) {
@@ -760,13 +883,13 @@ tbody tr:hover {
 
 .date-trigger[aria-expanded='true'] {
   border-color: var(--brand-2);
-  box-shadow: 0 0 0 3px var(--brand-tint);
 }
 
 .date-value {
   direction: ltr;
   unicode-bidi: isolate;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--font-latin);
+  font-variant-numeric: tabular-nums;
 }
 
 .date-placeholder {
@@ -775,12 +898,12 @@ tbody tr:hover {
 
 .date-icon {
   opacity: 0.7;
-  font-size: 15px;
+  font-size: var(--text-md);
 }
 
 .calendar {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + var(--space-2));
   /* explicit right/left, not logical properties: the popover itself is dir=ltr
      (English calendar) while the page is rtl, and logical insets resolve
      against the element's own direction */
@@ -791,27 +914,27 @@ tbody tr:hover {
   max-width: 90vw;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 14px 36px rgba(10, 46, 102, 0.18);
-  padding: 14px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-3);
+  padding: var(--space-4);
 }
 
 .calendar-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 
 .calendar-head > button {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
+  width: var(--space-6);
+  height: var(--space-6);
+  border-radius: var(--radius-circle);
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--brand);
-  font-size: 17px;
+  font-size: var(--text-lg);
   line-height: 1;
   cursor: pointer;
 }
@@ -822,44 +945,46 @@ tbody tr:hover {
 
 .calendar-title {
   display: flex;
-  gap: 6px;
+  gap: var(--space-2);
   flex: 1;
 }
 
 .calendar-title select {
-  padding: 6px 8px;
-  font-size: 13.5px;
-  border-radius: 8px;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-sm);
+  border-radius: var(--radius-sm);
 }
 
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 3px;
+  gap: var(--space-1);
 }
 
 .calendar-weekdays {
-  margin-bottom: 6px;
+  margin-bottom: var(--space-2);
 }
 
 .calendar-weekdays span {
   text-align: center;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
   color: var(--ink-soft);
-  padding-bottom: 4px;
+  padding-bottom: var(--space-1);
 }
 
 .calendar-day {
   aspect-ratio: 1;
   border: 1px solid transparent;
-  border-radius: 9px;
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--ink);
   font: inherit;
-  font-size: 13.5px;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-size: var(--text-sm);
+  font-family: var(--font-latin);
+  font-variant-numeric: tabular-nums;
   cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out);
 }
 
 .calendar-day:hover {
@@ -872,16 +997,16 @@ tbody tr:hover {
 
 .calendar-day.selected {
   background: linear-gradient(135deg, var(--brand), var(--brand-2));
-  color: #fff;
-  font-weight: 700;
+  color: var(--ink-on-brand);
+  font-weight: var(--weight-bold);
 }
 
 .calendar-foot {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
-  margin-top: 12px;
-  padding-top: 10px;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
   border-top: 1px solid var(--line);
 }
 
@@ -889,11 +1014,11 @@ tbody tr:hover {
   background: none;
   border: 0;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--brand-2);
   cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 6px;
+  padding: var(--space-hair) var(--space-2);
+  border-radius: var(--radius-sm);
 }
 
 .calendar-foot button:hover {
@@ -934,30 +1059,34 @@ input[type='number'] {
   display: grid;
   grid-template-columns: 1fr 1fr;
   width: min(920px, 94vw);
-  margin: 32px auto;
+  margin: var(--space-6) auto;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
-  box-shadow: 0 18px 48px rgba(10, 46, 102, 0.14);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-3);
   overflow: hidden;
 }
 
 .auth-art {
   position: relative;
   min-height: 460px;
-  background: linear-gradient(
-    160deg,
-    var(--brand-dark),
-    var(--brand) 60%,
-    var(--brand-2)
-  );
+  overflow: hidden;
+  /* the poster doubles as the background: it covers the first paint, the
+     reduced-motion fallback, and any browser that will not play the video.
+     The brand gradient shows through only if the poster itself is missing. */
+  background:
+    url('/brand/login-kuwait-poster.jpg') center / cover no-repeat,
+    linear-gradient(160deg, var(--brand-dark), var(--brand) 60%, var(--brand-2));
 }
 
-.auth-skyline {
+.auth-video {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  object-fit: cover;
+  display: block;
+  border: 0;
 }
 
 .auth-art::after {
@@ -967,143 +1096,30 @@ input[type='number'] {
   inset-inline: 0;
   bottom: 0;
   height: 170px;
-  background: linear-gradient(to top, rgba(4, 12, 32, 0.94) 24%, rgba(4, 12, 32, 0));
+  background: linear-gradient(to top, var(--alpha-night) 24%, var(--alpha-night-0));
   pointer-events: none;
-}
-
-/* --- animated login skyline ------------------------------------------- */
-
-@keyframes sky-twinkle {
-  0%,
-  100% {
-    opacity: 0.12;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-@keyframes sky-sweep {
-  0% {
-    transform: translateY(0);
-    opacity: 0;
-  }
-  12% {
-    opacity: 1;
-  }
-  88% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(-330px);
-    opacity: 0;
-  }
-}
-
-@keyframes sky-grid {
-  from {
-    transform: translateY(0);
-  }
-  to {
-    transform: translateY(26px);
-  }
-}
-
-@keyframes sky-pulse {
-  0%,
-  100% {
-    opacity: 0.5;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.95;
-    transform: scale(1.06);
-  }
-}
-
-@keyframes sky-beacon {
-  0%,
-  100% {
-    opacity: 0.25;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.sky-star {
-  animation: sky-twinkle 4s ease-in-out infinite;
-}
-
-.sky-sweep {
-  animation: sky-sweep 6.5s cubic-bezier(0.45, 0, 0.25, 1) infinite;
-}
-
-.sky-grid-flow {
-  animation: sky-grid 2.4s linear infinite;
-}
-
-.sky-pulse {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: sky-pulse 8s ease-in-out infinite;
-}
-
-.sky-beacon {
-  animation: sky-beacon 2.2s ease-in-out infinite;
-}
-
-.sky-beacon-b {
-  animation-duration: 3.1s;
-  animation-delay: 0.6s;
-}
-
-.flag-still {
-  display: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sky-star,
-  .sky-grid-flow,
-  .sky-pulse,
-  .sky-beacon {
-    animation: none;
-  }
-
-  .sky-sweep {
-    animation: none;
-    opacity: 0;
-  }
-
-  .flag-wave {
-    display: none;
-  }
-
-  .flag-still {
-    display: block;
-  }
 }
 
 .auth-art-copy {
   position: absolute;
   z-index: 1;
   inset-inline: 0;
-  bottom: 30px;
+  bottom: var(--space-6);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  color: #fff;
+  gap: var(--space-2);
+  color: var(--ink-on-brand);
   text-align: center;
-  padding: 0 24px;
+  padding: 0 var(--space-5);
 }
 
 .auth-art-copy strong {
-  font-size: 17px;
+  font-size: var(--text-lg);
 }
 
 .auth-art-copy span {
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   opacity: 0.85;
 }
 
@@ -1112,26 +1128,26 @@ input[type='number'] {
   height: 52px;
   object-fit: contain;
   filter: brightness(0) invert(1);
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 
 .auth-form {
-  padding: 44px 38px;
+  padding: var(--space-7) var(--space-6);
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 
 .auth-form h2 {
-  margin: 0 0 4px;
-  font-size: 20px;
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-xl);
 }
 
 .empty-art {
   width: 190px;
   max-width: 60%;
   height: auto;
-  margin: 0 auto 14px;
+  margin: 0 auto var(--space-3);
   display: block;
 }
 
@@ -1142,9 +1158,9 @@ input[type='number'] {
 .docs-head {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 14px;
-  padding-bottom: 10px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--line);
 }
 
@@ -1164,6 +1180,33 @@ input[type='number'] {
   }
 
   .auth-form {
-    padding: 28px 22px 34px;
+    padding: var(--space-6) var(--space-5);
+  }
+}
+
+/* ---------- reduced motion, once, for everything ----------
+
+   Handled globally so a new animation can never forget it. */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .spinner,
+  .loading-bar::after {
+    /* these two communicate "working" — slow them right down, don't stop them */
+    animation-duration: 3s !important;
+    animation-iteration-count: infinite !important;
+  }
+
+  /* the hero stops moving; the poster behind it stays */
+  .auth-video {
+    display: none;
   }
 }
