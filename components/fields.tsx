@@ -4,7 +4,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import Combobox, { type ComboOption } from '@/components/combobox'
 import DateField from '@/components/date-field'
-import { flagSrc } from '@/lib/nationalities'
+import { flagPosition } from '@/lib/nationalities'
 import type { FieldDef } from '@/lib/templates/types'
 
 type Values = Record<string, unknown>
@@ -41,17 +41,13 @@ function spanStyle(field: FieldDef): CSSProperties | undefined {
 }
 
 /**
- * The flag beside an option. The combobox decides which options are close
- * enough to the scroll box to draw at all, so this is only ever called for a
- * flag that is about to be seen; width and height are set so the row does not
- * shift when the file lands.
+ * The flag beside an option: a window onto the one sprite, so every row in the
+ * list is drawn from a single image that was already fetched.
  */
 function flagIcon(option: ComboOption): ReactNode {
-  const src = flagSrc(option.value)
-  if (!src) return <span className="flag flag-none" />
-  return (
-    <img className="flag" src={src} alt="" width={21} height={16} decoding="async" />
-  )
+  const position = flagPosition(option.value)
+  if (!position) return <span className="flag flag-none" />
+  return <span className="flag" style={{ backgroundPosition: position }} />
 }
 
 function optionIconFor(field: FieldDef) {

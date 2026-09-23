@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { searchOptions } from '@/lib/arabic-search'
 
 export type ComboOption = { value: string; labelAr: string }
@@ -108,57 +108,6 @@ export default function Combobox({
     const el = listRef.current.querySelector<HTMLElement>('[data-active="true"]')
     el?.scrollIntoView({ block: 'nearest' })
   }, [open, active])
-
-  /*
-   * Only draw the icon for options that are actually in the scroll box.
-   * `loading="lazy"` is not enough: Chromium's lazy margin is generous enough
-   * to pull most of a 196-row list at once, which for flags meant about a
-   * megabyte on first open. An observer rooted on the list itself is exact.
-   */
-  const [shownIcons, setShownIcons] = useState<ReadonlySet<string>>(new Set())
-
-  /*
-   * The rows register here as React mounts them. They mount once, on the
-   * component's first render, because the list is `hidden` rather than
-   * unmounted — so nothing may clear this map on open/close, or the observer
-   * would have nothing left to watch. React itself calls back with null when a
-   * row really does leave the DOM.
-   */
-  const rowsRef = useRef(new Map<string, HTMLLIElement>())
-
-  const observeOption = useCallback((el: HTMLLIElement | null) => {
-    const rows = rowsRef.current
-    if (el?.dataset.value) rows.set(el.dataset.value, el)
-    else if (!el) {
-      for (const [key, node] of rows) if (!node.isConnected) rows.delete(key)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!open || !icon || !listRef.current) return
-    const rows = rowsRef.current
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const seen = entries
-          .filter((e) => e.isIntersecting)
-          .map((e) => (e.target as HTMLElement).dataset.value)
-          .filter((v): v is string => Boolean(v))
-        if (!seen.length) return
-        setShownIcons((prev) => {
-          if (seen.every((v) => prev.has(v))) return prev
-          const next = new Set(prev)
-          seen.forEach((v) => next.add(v))
-          return next
-        })
-      },
-      { root: listRef.current, rootMargin: '120px' },
-    )
-    rows.forEach((el) => {
-      if (el.isConnected) observer.observe(el)
-    })
-    return () => observer.disconnect()
-    // re-observe whenever the rendered set of rows changes
-  }, [open, icon, matches])
 
   const move = (delta: number) => {
     if (!matches.length) return
@@ -278,8 +227,6 @@ export default function Combobox({
             role="option"
             aria-selected={option.value === value}
             data-active={index === active}
-            data-value={option.value}
-            ref={icon ? observeOption : undefined}
             className="combo-option"
             // mousedown, not click: it beats the input's blur
             onMouseDown={(event) => {
@@ -290,7 +237,7 @@ export default function Combobox({
           >
             {icon ? (
               <span className="combo-icon" aria-hidden="true">
-                {shownIcons.has(option.value) ? icon(option) : null}
+                {icon(option)}
               </span>
             ) : null}
             <span className="combo-label">{option.labelAr}</span>

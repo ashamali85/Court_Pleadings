@@ -722,18 +722,25 @@ input.combo-input::placeholder {
   height: 16px;
 }
 
+/* One 101KB sprite holds all 195 flags at 3x; each .flag is a window onto it,
+   positioned inline from lib/flag-sprite.ts. One request, no per-row fetch,
+   and nothing to lazy-load. */
 .flag {
   width: 21px;
   height: 16px;
   border-radius: 2px;
   /* many flags are white at the edge; without this they dissolve into the box */
   box-shadow: 0 0 0 1px var(--alpha-ink-18);
-  object-fit: cover;
+  background-image: url('/flags.webp');
+  background-size: 294px 224px; /* 14 columns x 14 rows at 21x16 */
+  background-repeat: no-repeat;
   display: block;
 }
 
+/* «بدون جنسية» has no country */
 .flag-none {
-  background: var(--surface-2);
+  background-image: none;
+  background-color: var(--surface-2);
 }
 
 .combo-list {

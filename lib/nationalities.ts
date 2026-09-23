@@ -12,10 +12,16 @@
  * and does not scroll for the neighbours.
  */
 
+import { FLAG_CELL } from '@/lib/flag-sprite'
+
 export type Nationality = { value: string; labelAr: string }
 
 /** not an ISO code; «بدون» is common enough in Kuwait to be a real option */
 export const STATELESS = 'STATELESS'
+
+/** the size one flag is drawn at; the sprite holds them at 3x this */
+export const FLAG_W = 21
+export const FLAG_H = 16
 
 const GCC: Nationality[] = [
   { value: 'KW', labelAr: 'كويتي' },
@@ -243,11 +249,18 @@ export function isNationalityCode(code: string): boolean {
 }
 
 /**
- * The flag for an ISO code, served from public/flags. Emoji flags are not an
- * option: Windows ships no flag glyphs, so 🇰🇼 renders as the letters "KW" on
- * most of this office's clients. STATELESS has no country and so no flag.
+ * Where this nationality's flag sits in public/flags.webp, as a ready-made
+ * CSS background-position. All 195 live in one 101KB sprite: as separate SVGs
+ * they were 1.2MB and cost a request per visible row.
+ *
+ * Emoji flags are not an option — Windows ships no flag glyphs, so 🇰🇼 renders
+ * as the letters "KW" on most of this office's clients. STATELESS is not a
+ * country and has no flag.
  */
-export function flagSrc(code: string): string | null {
-  if (!isNationalityCode(code) || code === STATELESS) return null
-  return `/flags/${code.toLowerCase()}.svg`
+export function flagPosition(code: string): string | null {
+  if (code === STATELESS) return null
+  const cell = FLAG_CELL[code]
+  if (!cell) return null
+  const [col, row] = cell
+  return `${-col * FLAG_W}px ${-row * FLAG_H}px`
 }
