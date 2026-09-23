@@ -7,3 +7,6 @@ lib/generated
 next-env.d.ts
 .DS_Store
 .vercel
+
+# files the desktop app drops here when it saves chat attachments
+Claude outputs/

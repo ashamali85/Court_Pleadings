@@ -1,66 +1,27 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
-import ReviewForm from '@/app/admin/requests/[id]/review-form'
-import { SuccessArt } from '@/components/brand'
+import { EmptyArt } from '@/components/brand'
 import Topbar from '@/components/topbar'
 import { requireAdmin } from '@/lib/auth'
-import {
-  applyContentToOverridable,
-  applyContentToSections,
-  getContent,
-  templateName,
-  translator,
-} from '@/lib/content'
+import { getContent, templateName, translator } from '@/lib/content'
 import db from '@/lib/db'
 import { statusBadge } from '@/lib/status'
 import { getTemplate } from '@/lib/templates'
 
 export const dynamic = 'force-dynamic'
 
-type Reviewed = {
-  values?: Record<string, unknown>
-  overrides?: Record<string, string>
-}
-
-export default async function ReviewRequestPage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
+export default async function AdminInbox() {
   const admin = await requireAdmin()
-  const { id } = await params
-
-  const request = await db.caseRequest.findUnique({
-    where: { id },
-    include: { client: true, documents: { orderBy: { version: 'desc' } } },
-  })
-  if (!request) notFound()
-
-  const template = getTemplate(request.templateKey)
-  if (!template) notFound()
-
   const content = await getContent()
   const t = translator(content)
 
-  const reviewed = (request.reviewedData ?? {}) as Reviewed
-  const values = {
-    ...(request.data as Record<string, unknown>),
-    ...(reviewed.values ?? {}),
-  }
-  const overrides = reviewed.overrides ?? {}
-  const badge = statusBadge(request.status)
+  const requests = await db.caseRequest.findMany({
+    orderBy: [{ createdAt: 'desc' }],
+    include: { client: true },
+  })
 
-  // preview of the computed text, exactly as it will be written into the .docx
-  let preview: Record<string, string> = {}
-  const parsed = template.schema.safeParse(values)
-  if (parsed.success) {
-    const placeholders = template.derive(parsed.data, overrides)
-    preview = Object.fromEntries(
-      Object.entries(placeholders)
-        .filter(([, v]) => typeof v === 'string')
-        .map(([k, v]) => [k, v as string]),
-    )
-  }
+  const pending = requests.filter(
+    (r: { status: string }) => r.status === 'SUBMITTED' || r.status === 'UNDER_REVIEW',
+  ).length
 
   return (
     <>
@@ -69,96 +30,77 @@ export default async function ReviewRequestPage({
         <div className="container">
           <div className="page-head">
             <div>
-              <h1>
-                {t('client.list.colRef')}{' '}
-                <span className="ref">{request.reference}</span>
-              </h1>
+              <h1>{t('admin.inbox.title')}</h1>
               <p className="muted">
-                {templateName(template, content)} · {request.client.fullName} ·{' '}
-                {request.createdAt.toLocaleString('ar-KW')}
+                {pending > 0
+                  ? `${pending} ${t('admin.inbox.pending')}`
+                  : t('admin.inbox.noPending')}
               </p>
-              <span className={`badge ${badge.className}`}>
-                {t(`status.${request.status}`)}
-              </span>
             </div>
-            <Link className="btn secondary" href="/admin">
-              {t('admin.review.backBtn')}
-            </Link>
           </div>
 
-          {request.clientNote ? (
-            <div className="card tinted">
-              <div className="section-title">{t('admin.review.clientNoteTitle')}</div>
-              <div className="preview">{request.clientNote}</div>
-            </div>
-          ) : null}
-
-          {request.documents.length > 0 ? (
-            <div className="card">
-              <div className="docs-head">
-                <SuccessArt className="docs-art" />
-                <div className="section-title" style={{ flex: 1, marginBottom: 0 }}>
-                  {t('admin.review.docsTitle')}
-                </div>
+          <div className="card">
+            {requests.length === 0 ? (
+              <div className="empty">
+                <EmptyArt className="empty-art" />
+                <p>{t('admin.inbox.empty')}</p>
               </div>
+            ) : (
               <table>
                 <thead>
                   <tr>
-                    <th>{t('admin.review.colVersion')}</th>
-                    <th>{t('admin.review.colFile')}</th>
-                    <th>{t('admin.review.colIssued')}</th>
+                    <th>{t('client.list.colRef')}</th>
+                    <th>{t('admin.inbox.colClient')}</th>
+                    <th>{t('client.list.colType')}</th>
+                    <th>{t('admin.inbox.colSummary')}</th>
+                    <th>{t('client.list.colDate')}</th>
+                    <th>{t('client.list.colStatus')}</th>
                     <th />
                   </tr>
                 </thead>
                 <tbody>
-                  {request.documents.map(
-                    (d: {
-                      id: string
-                      version: number
-                      filename: string
-                      createdAt: Date
-                    }) => (
-                      <tr key={d.id}>
-                        <td>{d.version}</td>
-                        <td dir="ltr">{d.filename}</td>
-                        <td>{d.createdAt.toLocaleString('ar-KW')}</td>
+                  {requests.map((r) => {
+                    const template = getTemplate(r.templateKey)
+                    const badge = statusBadge(r.status)
+                    let summary = t('common.none')
+                    try {
+                      if (template) summary = template.summary(r.data as never)
+                    } catch {
+                      summary = t('common.none')
+                    }
+                    return (
+                      <tr key={r.id}>
                         <td>
-                          <a href={`/api/documents/${d.id}`}>{t('common.download')}</a>
+                          <span className="ref">{r.reference}</span>
+                        </td>
+                        <td>
+                          {r.client.fullName}
+                          <div className="hint" dir="ltr">
+                            {r.client.email}
+                          </div>
+                        </td>
+                        <td>
+                          {template ? templateName(template, content) : r.templateKey}
+                        </td>
+                        <td>{summary}</td>
+                        <td>{r.createdAt.toLocaleDateString('ar-KW')}</td>
+                        <td>
+                          <span className={`badge ${badge.className}`}>
+                            {t(`status.${r.status}`)}
+                          </span>
+                        </td>
+                        <td>
+                          <Link href={`/admin/requests/${r.id}`}>
+                            {t('admin.inbox.reviewLink')}
+                          </Link>
                         </td>
                       </tr>
-                    ),
-                  )}
+                    )
+                  })}
                 </tbody>
               </table>
-            </div>
-          ) : null}
-
-          <ReviewForm
-            requestId={request.id}
-            sections={applyContentToSections(template, content)}
-            overridable={applyContentToOverridable(template, content)}
-            values={values}
-            overrides={overrides}
-            lawyerNote={request.lawyerNote ?? ''}
-            preview={preview}
-            labels={{
-              computedTitle: t('admin.review.computedTitle'),
-              computedHint: t('admin.review.computedHint'),
-              overrideTitle: t('admin.review.overrideTitle'),
-              overrideHint: t('admin.review.overrideHint'),
-              noteTitle: t('admin.review.noteTitle'),
-              generate: t('admin.review.generateBtn'),
-              generateLoading: t('admin.review.generateLoading'),
-              save: t('admin.review.saveBtn'),
-              loading: t('common.loading'),
-              rejectTitle: t('admin.review.rejectTitle'),
-              rejectReason: t('admin.review.rejectReasonLabel'),
-              reject: t('admin.review.rejectBtn'),
-              download: t('admin.review.downloadLink'),
-              needsFix: t('message.needsFix'),
-              working: t('common.working'),
-            }}
-          />
+            )}
+          </div>
         </div>
       </main>
     </>
