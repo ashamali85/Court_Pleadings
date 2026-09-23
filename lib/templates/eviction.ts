@@ -23,6 +23,26 @@ export type PartyType = (typeof PARTY_TYPES)[number]
 /** Kuwaiti civil ID: twelve digits, no separators. */
 const CIVIL_ID_RE = /^\d{12}$/
 
+/** Registration numbers are digits; lengths vary, so only the shape is fixed. */
+const DIGITS_RE = /^\d{4,15}$/
+
+/**
+ * Legal forms of a Kuwaiti company. The value is a stable code and the label is
+ * what the pleading says, so rewording one never rewrites stored data.
+ */
+export const COMPANY_FORMS = [
+  { value: 'llc', labelAr: 'ذات مسؤولية محدودة' },
+  { value: 'single_person', labelAr: 'شركة الشخص الواحد' },
+  { value: 'closed_shareholding', labelAr: 'شركة مساهمة مقفلة' },
+  { value: 'general_partnership', labelAr: 'شركة تضامنية' },
+  { value: 'limited_partnership', labelAr: 'شركة توصية بسيطة' },
+  { value: 'partnership_by_shares', labelAr: 'شركة توصية بالأسهم' },
+] as const
+
+const COMPANY_FORM_LABEL = new Map<string, string>(
+  COMPANY_FORMS.map((f) => [f.value, f.labelAr]),
+)
+
 const heirSchema = z.object({
   name: z.string().trim().max(300).default(''),
   civil_id: z.string().trim().max(20).default(''),
@@ -48,9 +68,9 @@ export const evictionSchema = z
     plaintiff_heirs: z.array(heirSchema).max(40).default([]),
 
     plaintiff_company_name: z.string().trim().max(300).default(''),
+    plaintiff_company_form: z.string().trim().max(40).default(''),
     plaintiff_company_register: z.string().trim().max(40).default(''),
-    plaintiff_rep_role: z.string().trim().max(100).default(''),
-    plaintiff_rep_name: z.string().trim().max(300).default(''),
+    plaintiff_company_civil_no: z.string().trim().max(20).default(''),
 
     plaintiff_licence_name: z.string().trim().max(300).default(''),
     plaintiff_licence_number: z.string().trim().max(40).default(''),
@@ -134,11 +154,20 @@ export const evictionSchema = z
           'اسم الشركة مطلوب',
         )
         need(
-          filled(v.plaintiff_company_register, 1),
-          ['plaintiff_company_register'],
-          'رقم السجل التجاري مطلوب',
+          COMPANY_FORM_LABEL.has(v.plaintiff_company_form),
+          ['plaintiff_company_form'],
+          'شكل الشركة مطلوب',
         )
-        need(filled(v.plaintiff_rep_name), ['plaintiff_rep_name'], 'اسم الممثل مطلوب')
+        need(
+          DIGITS_RE.test(v.plaintiff_company_register),
+          ['plaintiff_company_register'],
+          'رقم السجل التجاري مطلوب (أرقام فقط)',
+        )
+        need(
+          DIGITS_RE.test(v.plaintiff_company_civil_no),
+          ['plaintiff_company_civil_no'],
+          'رقم الجهة المدنية مطلوب (أرقام فقط)',
+        )
         break
 
       case 'licence':
@@ -208,9 +237,9 @@ export const evictionDefaults: EvictionValues = {
   plaintiff_deceased_name: '',
   plaintiff_heirs: [{ name: '', civil_id: '', nationality: 'KW' }],
   plaintiff_company_name: '',
+  plaintiff_company_form: '',
   plaintiff_company_register: '',
-  plaintiff_rep_role: '',
-  plaintiff_rep_name: '',
+  plaintiff_company_civil_no: '',
   plaintiff_licence_name: '',
   plaintiff_licence_number: '',
   plaintiff_owner_name: '',
@@ -330,7 +359,15 @@ const fields: Record<string, FieldDef> = {
     type: 'text',
     required: true,
     showWhen: { field: 'plaintiff_type', equals: ['company'] },
-    placeholder: 'شركة ... للتجارة العامة والمقاولات ذ.م.م',
+    placeholder: 'شركة ... للتجارة العامة والمقاولات',
+  },
+  plaintiff_company_form: {
+    name: 'plaintiff_company_form',
+    labelAr: 'شكل الشركة',
+    type: 'select',
+    required: true,
+    showWhen: { field: 'plaintiff_type', equals: ['company'] },
+    options: COMPANY_FORMS.map((f) => ({ value: f.value, labelAr: f.labelAr })),
   },
   plaintiff_company_register: {
     name: 'plaintiff_company_register',
@@ -341,21 +378,15 @@ const fields: Record<string, FieldDef> = {
     showWhen: { field: 'plaintiff_type', equals: ['company'] },
     placeholder: '000000',
   },
-  plaintiff_rep_role: {
-    name: 'plaintiff_rep_role',
-    labelAr: 'صفة الممثل (اختياري)',
-    hintAr: 'مثال: المدير العام، رئيس مجلس الإدارة، الوكيل المفوّض.',
-    type: 'text',
-    showWhen: { field: 'plaintiff_type', equals: ['company'] },
-    placeholder: 'المدير العام',
-  },
-  plaintiff_rep_name: {
-    name: 'plaintiff_rep_name',
-    labelAr: 'اسم الممثل',
+  plaintiff_company_civil_no: {
+    name: 'plaintiff_company_civil_no',
+    labelAr: 'رقم الجهة المدنية',
+    hintAr: 'الرقم المدني للجهة الصادر من الهيئة العامة للمعلومات المدنية.',
     type: 'text',
     required: true,
+    latinDigits: true,
     showWhen: { field: 'plaintiff_type', equals: ['company'] },
-    placeholder: 'فلان الفلاني',
+    placeholder: '000000000',
   },
 
   /* --- رخصة فردية --- */
@@ -547,17 +578,19 @@ export function plaintiffLine(values: EvictionValues): string {
       return heirs ? `${head}\n${heirs}` : head
     }
 
-    case 'company': {
-      const register = values.plaintiff_company_register
-        ? ` – سجل تجاري رقم (${values.plaintiff_company_register})`
-        : ''
-      const role = values.plaintiff_rep_role.trim()
-      const rep = values.plaintiff_rep_name.trim()
-      const representedBy = rep
-        ? `، ويمثلها ${role ? `${role} ` : ''}السيد/ ${rep}`
-        : ''
-      return `${values.plaintiff_company_name.trim()}${register}${representedBy}`
-    }
+    case 'company':
+      return [
+        values.plaintiff_company_name.trim(),
+        COMPANY_FORM_LABEL.get(values.plaintiff_company_form) ?? '',
+        values.plaintiff_company_register
+          ? `سجل تجاري رقم (${values.plaintiff_company_register})`
+          : '',
+        values.plaintiff_company_civil_no
+          ? `رقم الجهة المدنية (${values.plaintiff_company_civil_no})`
+          : '',
+      ]
+        .filter(Boolean)
+        .join(' – ')
 
     case 'licence': {
       const number = values.plaintiff_licence_number
@@ -699,9 +732,9 @@ export const evictionTemplate: TemplateDef<EvictionValues> = {
         fields.plaintiff_deceased_name,
         fields.plaintiff_heirs,
         fields.plaintiff_company_name,
+        fields.plaintiff_company_form,
         fields.plaintiff_company_register,
-        fields.plaintiff_rep_role,
-        fields.plaintiff_rep_name,
+        fields.plaintiff_company_civil_no,
         fields.plaintiff_licence_name,
         fields.plaintiff_licence_number,
         fields.plaintiff_owner_name,

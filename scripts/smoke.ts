@@ -150,12 +150,27 @@ check(
   'شركة',
   lineFor({
     plaintiff_type: 'company',
-    plaintiff_company_name: 'شركة الخليج العقارية ذ.م.م',
+    plaintiff_company_name: 'شركة الخليج العقارية',
+    plaintiff_company_form: 'llc',
     plaintiff_company_register: '123456',
-    plaintiff_rep_role: 'المدير العام',
-    plaintiff_rep_name: 'خالد يوسف العنزي',
+    plaintiff_company_civil_no: '100234567',
   }),
-  'شركة الخليج العقارية ذ.م.م – سجل تجاري رقم (123456)، ويمثلها المدير العام السيد/ خالد يوسف العنزي',
+  'شركة الخليج العقارية – ذات مسؤولية محدودة – سجل تجاري رقم (123456) – رقم الجهة المدنية (100234567)',
+)
+
+// شكل الشركة is a closed list, so a stale or hand-posted value is rejected
+const badForm = evictionTemplate.schema.safeParse({
+  ...sample,
+  plaintiff_type: 'company',
+  plaintiff_company_name: 'شركة الخليج العقارية',
+  plaintiff_company_form: 'ذات مسؤولية محدودة',
+  plaintiff_company_register: '123456',
+  plaintiff_company_civil_no: '100234567',
+})
+check(
+  'company form must be one of the six',
+  badForm.success ? 'accepted' : badForm.error.issues[0]?.path.join('.'),
+  'plaintiff_company_form',
 )
 
 check(
