@@ -92,6 +92,7 @@
   --field-w-num: 18ch; /* 12-digit civil ID */
   --field-w-date: 21ch; /* «يوم/شهر/سنة» plus the calendar icon, on one line */
   --field-w-sel: 22ch; /* nationality, party type, month */
+  --field-w-phrase: 30ch; /* a select whose options are a phrase, e.g. شكل الشركة */
   --field-w-name: 36ch; /* a person's full name */
   --field-w-org: 46ch; /* a company or establishment name */
   --form-max: 680px; /* a single form column stays inside comfortable measure */
@@ -486,13 +487,14 @@ main {
   margin-bottom: var(--space-5);
 }
 
-/* label = caption: smaller and lighter in weight than the value, but dark, so
-   it never reads as the same text as the hint inside the box.
-   value = content: full-contrast ink, larger. The value wins the hierarchy. */
+/* label = caption: bold and dark, so the question is the first thing read and
+   never blurs into the hint inside the box.
+   value = content: full-contrast ink and two points larger, which is what
+   keeps it primary now that the label carries the heavier weight. */
 .field label {
   display: block;
   font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-bold);
   color: var(--ink-label);
   margin-bottom: var(--space-2);
   letter-spacing: 0.1px;
@@ -609,6 +611,10 @@ select[disabled] {
 
 .field :is(input, select, textarea, .date-trigger, .combo-control).w-sel {
   width: var(--field-w-sel);
+}
+
+.field :is(input, select, textarea, .date-trigger, .combo-control).w-phrase {
+  width: var(--field-w-phrase);
 }
 
 .field :is(input, select, textarea, .date-trigger, .combo-control).w-name {
@@ -850,10 +856,12 @@ input.combo-input::placeholder {
   accent-color: var(--brand);
 }
 
+/* sits beside its box rather than above it, so it keeps the value's size —
+   but it is still the field's label and carries the same weight as the rest */
 .checkbox label {
   margin: 0;
   font-size: var(--text-md);
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-bold);
   color: var(--ink);
 }
 

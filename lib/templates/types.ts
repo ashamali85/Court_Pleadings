@@ -16,7 +16,16 @@ export type FieldType =
  * Omitted means the control fills its grid cell — right for free prose.
  */
 export type FieldWidth =
-  'short' | 'reg' | 'money' | 'num' | 'date' | 'sel' | 'name' | 'org' | 'full'
+  | 'short'
+  | 'reg'
+  | 'money'
+  | 'num'
+  | 'date'
+  | 'sel'
+  | 'phrase'
+  | 'name'
+  | 'org'
+  | 'full'
 
 export type FieldDef = {
   name: string

@@ -388,7 +388,7 @@ const fields: Record<string, FieldDef> = {
   },
   plaintiff_company_form: {
     name: 'plaintiff_company_form',
-    width: 'sel',
+    width: 'phrase',
     span: 6,
     labelAr: 'شكل الشركة',
     type: 'select',
