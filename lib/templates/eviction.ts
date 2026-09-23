@@ -72,11 +72,12 @@ export const evictionSchema = z
     plaintiff_company_register: z.string().trim().max(40).default(''),
     plaintiff_company_civil_no: z.string().trim().max(20).default(''),
 
-    plaintiff_licence_name: z.string().trim().max(300).default(''),
-    plaintiff_licence_number: z.string().trim().max(40).default(''),
+    plaintiff_establishment_name: z.string().trim().max(300).default(''),
     plaintiff_owner_name: z.string().trim().max(300).default(''),
     plaintiff_owner_civil_id: z.string().trim().max(20).default(''),
     plaintiff_owner_nationality: z.string().trim().max(40).default(''),
+    plaintiff_licence_register: z.string().trim().max(40).default(''),
+    plaintiff_licence_civil_no: z.string().trim().max(20).default(''),
 
     defendant_name: z.string().trim().min(3, 'اسم المعلن إليه مطلوب').max(1000),
     defendant_address: z.string().trim().min(3, 'عنوان المعلن إليه مطلوب').max(2000),
@@ -166,25 +167,20 @@ export const evictionSchema = z
         need(
           DIGITS_RE.test(v.plaintiff_company_civil_no),
           ['plaintiff_company_civil_no'],
-          'رقم الجهة المدنية مطلوب (أرقام فقط)',
+          'رقم الجهة المدني مطلوب (أرقام فقط)',
         )
         break
 
       case 'licence':
         need(
-          filled(v.plaintiff_licence_name, 2),
-          ['plaintiff_licence_name'],
-          'اسم الترخيص مطلوب',
-        )
-        need(
-          filled(v.plaintiff_licence_number, 1),
-          ['plaintiff_licence_number'],
-          'رقم الترخيص مطلوب',
+          filled(v.plaintiff_establishment_name, 2),
+          ['plaintiff_establishment_name'],
+          'اسم المنشأة مطلوب',
         )
         need(
           filled(v.plaintiff_owner_name),
           ['plaintiff_owner_name'],
-          'اسم صاحب الترخيص مطلوب',
+          'اسم صاحب المنشأة مطلوب',
         )
         need(
           CIVIL_ID_RE.test(v.plaintiff_owner_civil_id),
@@ -195,6 +191,16 @@ export const evictionSchema = z
           filled(v.plaintiff_owner_nationality, 2),
           ['plaintiff_owner_nationality'],
           'الجنسية مطلوبة',
+        )
+        need(
+          DIGITS_RE.test(v.plaintiff_licence_register),
+          ['plaintiff_licence_register'],
+          'رقم السجل التجاري مطلوب (أرقام فقط)',
+        )
+        need(
+          DIGITS_RE.test(v.plaintiff_licence_civil_no),
+          ['plaintiff_licence_civil_no'],
+          'رقم الجهة المدني مطلوب (أرقام فقط)',
         )
         break
 
@@ -240,11 +246,12 @@ export const evictionDefaults: EvictionValues = {
   plaintiff_company_form: '',
   plaintiff_company_register: '',
   plaintiff_company_civil_no: '',
-  plaintiff_licence_name: '',
-  plaintiff_licence_number: '',
+  plaintiff_establishment_name: '',
   plaintiff_owner_name: '',
   plaintiff_owner_civil_id: '',
   plaintiff_owner_nationality: 'KW',
+  plaintiff_licence_register: '',
+  plaintiff_licence_civil_no: '',
   defendant_name: '',
   defendant_address: '',
   premises_same_as_defendant: true,
@@ -380,7 +387,7 @@ const fields: Record<string, FieldDef> = {
   },
   plaintiff_company_civil_no: {
     name: 'plaintiff_company_civil_no',
-    labelAr: 'رقم الجهة المدنية',
+    labelAr: 'رقم الجهة المدني',
     hintAr: 'الرقم المدني للجهة الصادر من الهيئة العامة للمعلومات المدنية.',
     type: 'text',
     required: true,
@@ -390,34 +397,26 @@ const fields: Record<string, FieldDef> = {
   },
 
   /* --- رخصة فردية --- */
-  plaintiff_licence_name: {
-    name: 'plaintiff_licence_name',
-    labelAr: 'اسم الترخيص',
+  plaintiff_establishment_name: {
+    name: 'plaintiff_establishment_name',
+    labelAr: 'اسم المنشأة (حسب رخصة وزارة التجارة)',
     type: 'text',
     required: true,
     showWhen: { field: 'plaintiff_type', equals: ['licence'] },
     placeholder: 'مؤسسة ... للتجارة العامة',
   },
-  plaintiff_licence_number: {
-    name: 'plaintiff_licence_number',
-    labelAr: 'رقم الترخيص',
-    type: 'text',
-    required: true,
-    latinDigits: true,
-    showWhen: { field: 'plaintiff_type', equals: ['licence'] },
-    placeholder: '000000',
-  },
   plaintiff_owner_name: {
     name: 'plaintiff_owner_name',
-    labelAr: 'اسم صاحب الترخيص',
+    labelAr: 'اسم صاحب المنشأة الكامل',
     type: 'text',
     required: true,
     showWhen: { field: 'plaintiff_type', equals: ['licence'] },
-    placeholder: 'فلان الفلاني',
+    placeholder: 'فلان الفلاني الفلاني',
   },
   plaintiff_owner_civil_id: {
     name: 'plaintiff_owner_civil_id',
-    labelAr: 'الرقم المدني لصاحب الترخيص',
+    labelAr: 'الرقم المدني لصاحب المنشأة',
+    hintAr: 'اثنا عشر رقماً كما تظهر على البطاقة المدنية، بدون فواصل.',
     type: 'text',
     required: true,
     latinDigits: true,
@@ -426,11 +425,30 @@ const fields: Record<string, FieldDef> = {
   },
   plaintiff_owner_nationality: {
     name: 'plaintiff_owner_nationality',
-    labelAr: 'جنسية صاحب الترخيص',
+    labelAr: 'جنسية صاحب المنشأة',
     type: 'select',
     required: true,
     showWhen: { field: 'plaintiff_type', equals: ['licence'] },
     options: NATIONALITIES.map((n) => ({ value: n.value, labelAr: n.labelAr })),
+  },
+  plaintiff_licence_register: {
+    name: 'plaintiff_licence_register',
+    labelAr: 'رقم السجل التجاري',
+    type: 'text',
+    required: true,
+    latinDigits: true,
+    showWhen: { field: 'plaintiff_type', equals: ['licence'] },
+    placeholder: '000000',
+  },
+  plaintiff_licence_civil_no: {
+    name: 'plaintiff_licence_civil_no',
+    labelAr: 'رقم الجهة المدني',
+    hintAr: 'الرقم المدني للجهة الصادر من الهيئة العامة للمعلومات المدنية.',
+    type: 'text',
+    required: true,
+    latinDigits: true,
+    showWhen: { field: 'plaintiff_type', equals: ['licence'] },
+    placeholder: '000000000',
   },
 
   defendant_name: {
@@ -586,23 +604,30 @@ export function plaintiffLine(values: EvictionValues): string {
           ? `سجل تجاري رقم (${values.plaintiff_company_register})`
           : '',
         values.plaintiff_company_civil_no
-          ? `رقم الجهة المدنية (${values.plaintiff_company_civil_no})`
+          ? `رقم الجهة المدني (${values.plaintiff_company_civil_no})`
           : '',
       ]
         .filter(Boolean)
         .join(' – ')
 
     case 'licence': {
-      const number = values.plaintiff_licence_number
-        ? ` – ترخيص رقم (${values.plaintiff_licence_number})`
-        : ''
+      const establishment = [
+        values.plaintiff_establishment_name.trim(),
+        values.plaintiff_licence_register
+          ? `سجل تجاري رقم (${values.plaintiff_licence_register})`
+          : '',
+        values.plaintiff_licence_civil_no
+          ? `رقم الجهة المدني (${values.plaintiff_licence_civil_no})`
+          : '',
+      ]
+        .filter(Boolean)
+        .join(' – ')
       const owner = personLine(
         values.plaintiff_owner_name,
         values.plaintiff_owner_civil_id,
         values.plaintiff_owner_nationality,
       )
-      const ownedBy = owner ? `، ويملكها السيد/ ${owner}` : ''
-      return `${values.plaintiff_licence_name.trim()}${number}${ownedBy}`
+      return owner ? `${establishment}، ويملكها السيد/ ${owner}` : establishment
     }
 
     default:
@@ -735,11 +760,12 @@ export const evictionTemplate: TemplateDef<EvictionValues> = {
         fields.plaintiff_company_form,
         fields.plaintiff_company_register,
         fields.plaintiff_company_civil_no,
-        fields.plaintiff_licence_name,
-        fields.plaintiff_licence_number,
+        fields.plaintiff_establishment_name,
         fields.plaintiff_owner_name,
         fields.plaintiff_owner_civil_id,
         fields.plaintiff_owner_nationality,
+        fields.plaintiff_licence_register,
+        fields.plaintiff_licence_civil_no,
         fields.defendant_name,
         fields.defendant_address,
       ],

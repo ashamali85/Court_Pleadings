@@ -155,7 +155,7 @@ check(
     plaintiff_company_register: '123456',
     plaintiff_company_civil_no: '100234567',
   }),
-  'شركة الخليج العقارية – ذات مسؤولية محدودة – سجل تجاري رقم (123456) – رقم الجهة المدنية (100234567)',
+  'شركة الخليج العقارية – ذات مسؤولية محدودة – سجل تجاري رقم (123456) – رقم الجهة المدني (100234567)',
 )
 
 // شكل الشركة is a closed list, so a stale or hand-posted value is rejected
@@ -177,13 +177,15 @@ check(
   'رخصة فردية',
   lineFor({
     plaintiff_type: 'licence',
-    plaintiff_licence_name: 'مؤسسة النور للتجارة العامة',
-    plaintiff_licence_number: '778899',
+    plaintiff_establishment_name: 'مؤسسة النور للتجارة العامة',
     plaintiff_owner_name: 'سالم فهد الدوسري',
     plaintiff_owner_civil_id: '280070500321',
     plaintiff_owner_nationality: 'KW',
+    plaintiff_licence_register: '778899',
+    plaintiff_licence_civil_no: '100998877',
   }),
-  'مؤسسة النور للتجارة العامة – ترخيص رقم (778899)، ويملكها السيد/ سالم فهد الدوسري – كويتي الجنسية – بطاقة مدنية رقم (280070500321)',
+  'مؤسسة النور للتجارة العامة – سجل تجاري رقم (778899) – رقم الجهة المدني (100998877)،' +
+    ' ويملكها السيد/ سالم فهد الدوسري – كويتي الجنسية – بطاقة مدنية رقم (280070500321)',
 )
 
 // a wrong civil ID is caught on the field that holds it, not the whole form
