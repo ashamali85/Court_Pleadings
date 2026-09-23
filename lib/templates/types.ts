@@ -1,6 +1,14 @@
 import type { ZodType } from 'zod'
 
-export type FieldType = 'text' | 'textarea' | 'number' | 'date' | 'select' | 'boolean'
+export type FieldType =
+  | 'text'
+  | 'textarea'
+  | 'number'
+  | 'date'
+  | 'select'
+  | 'boolean'
+  /** a repeatable group of fields — one heir, one partner, one row */
+  | 'rows'
 
 export type FieldDef = {
   name: string
@@ -13,8 +21,22 @@ export type FieldDef = {
   mirrorOf?: string
   /** show this field only when the named boolean field is false */
   hiddenWhen?: string
+  /** show this field only while another field holds one of these values */
+  showWhen?: { field: string; equals: string[] }
+  /** store Latin digits even when the client types ٤٥٠ */
+  latinDigits?: boolean
   placeholder?: string
   rows?: number
+
+  /* --- type: 'rows' ------------------------------------------------- */
+  /** the fields that repeat in every row */
+  rowFields?: FieldDef[]
+  /** «إضافة وريث» */
+  addLabelAr?: string
+  /** «وريث» — numbered per row in the UI */
+  rowLabelAr?: string
+  /** rows the client cannot go below (default 1) */
+  minRows?: number
 }
 
 export type SectionDef = {

@@ -53,6 +53,14 @@ export function HintButton({ text, forLabel }: { text: string; forLabel: string 
   )
 }
 
+/** A field with `showWhen` exists only while another field holds one of the
+    listed values. Hidden means unmounted, so it submits nothing at all and the
+    schema decides what an absent value means. */
+export function isVisible(field: FieldDef, values: Values): boolean {
+  if (!field.showWhen) return true
+  return field.showWhen.equals.includes(str(values[field.showWhen.field]))
+}
+
 export function Field({
   field,
   values,
@@ -67,6 +75,20 @@ export function Field({
   disabled?: boolean
 }) {
   const error = errors[field.name]
+
+  if (!isVisible(field, values)) return null
+
+  if (field.type === 'rows') {
+    return (
+      <RowsField
+        field={field}
+        values={values}
+        errors={errors}
+        onChange={onChange}
+        disabled={disabled}
+      />
+    )
+  }
 
   if (field.type === 'boolean') {
     return (
@@ -162,6 +184,156 @@ export function Field({
       {mirrored !== null ? (
         <input type="hidden" name={field.name} value={mirrored} />
       ) : null}
+
+      {error ? <div className="field-error">{error}</div> : null}
+    </div>
+  )
+}
+
+type Row = Record<string, string>
+
+function readRows(value: unknown, field: FieldDef): Row[] {
+  const min = field.minRows ?? 1
+  const blank = () =>
+    Object.fromEntries((field.rowFields ?? []).map((f) => [f.name, ''])) as Row
+
+  const rows: Row[] = Array.isArray(value)
+    ? (value as unknown[]).map((row) => ({ ...blank(), ...(row as Row) }))
+    : []
+
+  while (rows.length < min) rows.push(blank())
+  return rows
+}
+
+/**
+ * A repeatable group: one card per row, numbered, with its own remove button.
+ * The whole array rides to the server as JSON in a single hidden input, so
+ * nothing here depends on FormData's flat key space.
+ */
+function RowsField({
+  field,
+  values,
+  errors,
+  onChange,
+  disabled,
+}: {
+  field: FieldDef
+  values: Values
+  errors: Record<string, string>
+  onChange: (name: string, value: unknown) => void
+  disabled?: boolean
+}) {
+  const rows = readRows(values[field.name], field)
+  const min = field.minRows ?? 1
+  const error = errors[field.name]
+
+  const setRow = (index: number, sub: string, next: string) => {
+    const copy = rows.map((row, i) => (i === index ? { ...row, [sub]: next } : row))
+    onChange(field.name, copy)
+  }
+
+  const addRow = () => {
+    const blank = Object.fromEntries(
+      (field.rowFields ?? []).map((f) => [f.name, '']),
+    ) as Row
+    onChange(field.name, [...rows, blank])
+  }
+
+  const removeRow = (index: number) =>
+    onChange(
+      field.name,
+      rows.filter((_, i) => i !== index),
+    )
+
+  return (
+    <div className="field">
+      <div className="label-row">
+        <label>
+          {field.labelAr}
+          {field.required ? <span className="req">*</span> : null}
+        </label>
+        {field.hintAr ? (
+          <HintButton text={field.hintAr} forLabel={field.labelAr} />
+        ) : null}
+      </div>
+
+      <div className="rows-group">
+        {rows.map((row, index) => (
+          <div className="rows-item" key={index}>
+            <div className="rows-item-head">
+              <span className="rows-item-title">
+                {field.rowLabelAr ?? field.labelAr} {index + 1}
+              </span>
+              {rows.length > min ? (
+                <button
+                  type="button"
+                  className="rows-remove"
+                  onClick={() => removeRow(index)}
+                  disabled={disabled}
+                >
+                  حذف
+                </button>
+              ) : null}
+            </div>
+
+            <div className="row">
+              {(field.rowFields ?? []).map((sub) => {
+                const id = `${field.name}-${index}-${sub.name}`
+                const subError = errors[`${field.name}.${index}.${sub.name}`]
+                return (
+                  <div className="field" key={sub.name}>
+                    <div className="label-row">
+                      <label htmlFor={id}>
+                        {sub.labelAr}
+                        {sub.required ? <span className="req">*</span> : null}
+                      </label>
+                    </div>
+                    {sub.type === 'select' ? (
+                      <select
+                        id={id}
+                        value={row[sub.name] ?? ''}
+                        onChange={(e) => setRow(index, sub.name, e.target.value)}
+                        disabled={disabled}
+                      >
+                        <option value="">—</option>
+                        {sub.options?.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.labelAr}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        id={id}
+                        type="text"
+                        inputMode={sub.latinDigits ? 'numeric' : undefined}
+                        value={row[sub.name] ?? ''}
+                        placeholder={sub.placeholder}
+                        onChange={(e) => setRow(index, sub.name, e.target.value)}
+                        disabled={disabled}
+                      />
+                    )}
+                    {subError ? <div className="field-error">{subError}</div> : null}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="rows-foot">
+        <button
+          type="button"
+          className="btn secondary rows-add"
+          onClick={addRow}
+          disabled={disabled}
+        >
+          {field.addLabelAr ?? 'إضافة'}
+        </button>
+      </div>
+
+      <input type="hidden" name={field.name} value={JSON.stringify(rows)} />
 
       {error ? <div className="field-error">{error}</div> : null}
     </div>

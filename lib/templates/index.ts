@@ -26,14 +26,45 @@ export function formDataToValues(
     if (field.type === 'boolean') {
       const raw = formData.get(field.name)
       values[field.name] = raw === 'on' || raw === 'true'
+    } else if (field.type === 'rows') {
+      values[field.name] = parseRows(field, formData.get(field.name))
     } else {
       const raw = (formData.get(field.name) ?? '').toString().trim()
-      // an Arabic keyboard types ٤٥٠ and ١٩/٥/٢٠٢٦; store Latin digits
-      values[field.name] =
-        field.type === 'number' || field.type === 'date' ? toLatinDigits(raw) : raw
+      values[field.name] = normalise(field, raw)
     }
   }
   return values
+}
+
+/** an Arabic keyboard types ٤٥٠ and ١٩/٥/٢٠٢٦; store Latin digits */
+function normalise(field: FieldDef, raw: string): string {
+  const latin = field.type === 'number' || field.type === 'date' || field.latinDigits
+  return latin ? toLatinDigits(raw) : raw
+}
+
+/**
+ * A repeatable group travels as JSON in one hidden input — FormData has no
+ * native shape for an array of objects, and inventing `heirs[0][name]` keys
+ * would mean parsing them back out here.
+ */
+function parseRows(field: FieldDef, raw: FormDataEntryValue | null): unknown[] {
+  if (typeof raw !== 'string' || !raw.trim()) return []
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return []
+  }
+  if (!Array.isArray(parsed)) return []
+
+  return parsed.map((row) => {
+    const clean: Record<string, string> = {}
+    for (const sub of field.rowFields ?? []) {
+      const value = (row as Record<string, unknown>)?.[sub.name]
+      clean[sub.name] = normalise(sub, value === undefined ? '' : String(value).trim())
+    }
+    return clean
+  })
 }
 
 /** Overrides the lawyer typed on the review screen (blank = keep computed). */

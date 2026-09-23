@@ -2,7 +2,7 @@ import 'server-only'
 import { cache } from 'react'
 import db from '@/lib/db'
 import { contentDefaults, type ContentMap } from '@/lib/content/defaults'
-import type { SectionDef, TemplateDef } from '@/lib/templates/types'
+import type { FieldDef, SectionDef, TemplateDef } from '@/lib/templates/types'
 
 export { CONTENT_GROUPS, contentDefaults } from '@/lib/content/defaults'
 export type { ContentMap } from '@/lib/content/defaults'
@@ -38,6 +38,19 @@ export function translator(content: ContentMap) {
   }
 }
 
+/** A field with the admin's wording applied, row fields included. */
+function applyToField(field: FieldDef, base: string, content: ContentMap): FieldDef {
+  return {
+    ...field,
+    labelAr: content[`${base}.label`] ?? field.labelAr,
+    hintAr: content[`${base}.hint`] ?? field.hintAr,
+    placeholder: content[`${base}.placeholder`] ?? field.placeholder,
+    rowFields: field.rowFields?.map((sub) =>
+      applyToField(sub, `${base}.${sub.name}`, content),
+    ),
+  }
+}
+
 /** Template sections with the admin's label/hint/placeholder wording applied. */
 export function applyContentToSections(
   template: TemplateDef<never>,
@@ -46,15 +59,9 @@ export function applyContentToSections(
   return template.sections.map((section) => ({
     ...section,
     titleAr: content[`section.${template.key}.${section.key}.title`] ?? section.titleAr,
-    fields: section.fields.map((field) => {
-      const base = `field.${template.key}.${field.name}`
-      return {
-        ...field,
-        labelAr: content[`${base}.label`] ?? field.labelAr,
-        hintAr: content[`${base}.hint`] ?? field.hintAr,
-        placeholder: content[`${base}.placeholder`] ?? field.placeholder,
-      }
-    }),
+    fields: section.fields.map((field) =>
+      applyToField(field, `field.${template.key}.${field.name}`, content),
+    ),
   }))
 }
 

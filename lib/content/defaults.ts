@@ -1,4 +1,5 @@
 import { templates } from '@/lib/templates'
+import type { FieldDef } from '@/lib/templates/types'
 
 /**
  * Every user-visible string in the app, with its built-in Arabic wording.
@@ -148,12 +149,19 @@ export function contentDefaults(): Record<string, string> {
     for (const section of template.sections) {
       out[`section.${template.key}.${section.key}.title`] = section.titleAr
 
-      for (const field of section.fields) {
-        out[`field.${template.key}.${field.name}.label`] = field.labelAr
-        if (field.hintAr) out[`field.${template.key}.${field.name}.hint`] = field.hintAr
-        if (field.placeholder) {
-          out[`field.${template.key}.${field.name}.placeholder`] = field.placeholder
+      // a repeatable group contributes its own label plus one per row field,
+      // keyed field.<template>.<group>.<row field>.label
+      const walk = (field: FieldDef, prefix: string) => {
+        out[`${prefix}.label`] = field.labelAr
+        if (field.hintAr) out[`${prefix}.hint`] = field.hintAr
+        if (field.placeholder) out[`${prefix}.placeholder`] = field.placeholder
+        for (const sub of field.rowFields ?? []) {
+          walk(sub, `${prefix}.${sub.name}`)
         }
+      }
+
+      for (const field of section.fields) {
+        walk(field, `field.${template.key}.${field.name}`)
       }
     }
 

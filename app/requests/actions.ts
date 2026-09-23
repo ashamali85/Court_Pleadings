@@ -20,8 +20,13 @@ export type RequestFormState = {
 function collectIssues(issues: { path: PropertyKey[]; message: string }[]) {
   const errors: Record<string, string> = {}
   for (const issue of issues) {
-    const key = String(issue.path[0] ?? '')
-    if (key && !errors[key]) errors[key] = issue.message
+    // a row field reports at plaintiff_heirs.0.civil_id, so keep the whole path
+    // for the input that is wrong, and the head for the group it belongs to
+    const path = issue.path.map(String)
+    const full = path.join('.')
+    const head = path[0] ?? ''
+    if (full && !errors[full]) errors[full] = issue.message
+    if (head && !errors[head]) errors[head] = issue.message
   }
   return errors
 }

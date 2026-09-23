@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { nationalityLabel, NATIONALITIES } from '@/lib/nationalities'
 import { weekdayAr } from '@/lib/numerals'
 import { amountToArabicWords, formatAmount } from '@/lib/tafqeet'
 import type { FieldDef, Placeholders, TemplateDef } from '@/lib/templates/types'
@@ -16,9 +17,47 @@ const yearOptions = Array.from({ length: 12 }, (_, i) => {
   return { value: String(y), labelAr: String(y) }
 })
 
+export const PARTY_TYPES = ['natural', 'heirs', 'company', 'licence'] as const
+export type PartyType = (typeof PARTY_TYPES)[number]
+
+/** Kuwaiti civil ID: twelve digits, no separators. */
+const CIVIL_ID_RE = /^\d{12}$/
+
+const heirSchema = z.object({
+  name: z.string().trim().max(300).default(''),
+  civil_id: z.string().trim().max(20).default(''),
+  nationality: z.string().trim().max(40).default(''),
+})
+
+export type Heir = z.infer<typeof heirSchema>
+
 export const evictionSchema = z
   .object({
-    plaintiff_name: z.string().trim().min(3, 'اسم الطالب مطلوب').max(4000),
+    /* the plaintiff is one of four shapes; the fields for the other three are
+       absent from the form, so each one is validated only when it is chosen.
+       plaintiff_type is optional because requests submitted before this screen
+       existed carry a free-text plaintiff_name and no type at all. */
+    plaintiff_type: z.enum(PARTY_TYPES).optional(),
+    plaintiff_name: z.string().trim().max(4000).default(''),
+
+    plaintiff_full_name: z.string().trim().max(300).default(''),
+    plaintiff_civil_id: z.string().trim().max(20).default(''),
+    plaintiff_nationality: z.string().trim().max(40).default(''),
+
+    plaintiff_deceased_name: z.string().trim().max(300).default(''),
+    plaintiff_heirs: z.array(heirSchema).max(40).default([]),
+
+    plaintiff_company_name: z.string().trim().max(300).default(''),
+    plaintiff_company_register: z.string().trim().max(40).default(''),
+    plaintiff_rep_role: z.string().trim().max(100).default(''),
+    plaintiff_rep_name: z.string().trim().max(300).default(''),
+
+    plaintiff_licence_name: z.string().trim().max(300).default(''),
+    plaintiff_licence_number: z.string().trim().max(40).default(''),
+    plaintiff_owner_name: z.string().trim().max(300).default(''),
+    plaintiff_owner_civil_id: z.string().trim().max(20).default(''),
+    plaintiff_owner_nationality: z.string().trim().max(40).default(''),
+
     defendant_name: z.string().trim().min(3, 'اسم المعلن إليه مطلوب').max(1000),
     defendant_address: z.string().trim().min(3, 'عنوان المعلن إليه مطلوب').max(2000),
     premises_same_as_defendant: z.boolean(),
@@ -41,6 +80,100 @@ export const evictionSchema = z
     include_penalty_clause: z.boolean(),
   })
   .superRefine((v, ctx) => {
+    const need = (ok: boolean, path: (string | number)[], message: string) => {
+      if (!ok) ctx.addIssue({ code: 'custom', path, message })
+    }
+    const filled = (s: string, min = 3) => s.trim().length >= min
+    const CIVIL_ID_MSG = 'الرقم المدني يجب أن يتكوّن من 12 رقماً'
+
+    switch (v.plaintiff_type) {
+      case 'natural':
+        need(filled(v.plaintiff_full_name), ['plaintiff_full_name'], 'اسم الطالب مطلوب')
+        need(
+          CIVIL_ID_RE.test(v.plaintiff_civil_id),
+          ['plaintiff_civil_id'],
+          CIVIL_ID_MSG,
+        )
+        need(
+          filled(v.plaintiff_nationality, 2),
+          ['plaintiff_nationality'],
+          'الجنسية مطلوبة',
+        )
+        break
+
+      case 'heirs':
+        need(
+          filled(v.plaintiff_deceased_name),
+          ['plaintiff_deceased_name'],
+          'اسم المورِّث مطلوب',
+        )
+        need(
+          v.plaintiff_heirs.length > 0,
+          ['plaintiff_heirs'],
+          'أضف وريثاً واحداً على الأقل',
+        )
+        v.plaintiff_heirs.forEach((heir, i) => {
+          need(filled(heir.name), ['plaintiff_heirs', i, 'name'], 'اسم الوريث مطلوب')
+          need(
+            CIVIL_ID_RE.test(heir.civil_id),
+            ['plaintiff_heirs', i, 'civil_id'],
+            CIVIL_ID_MSG,
+          )
+          need(
+            filled(heir.nationality, 2),
+            ['plaintiff_heirs', i, 'nationality'],
+            'الجنسية مطلوبة',
+          )
+        })
+        break
+
+      case 'company':
+        need(
+          filled(v.plaintiff_company_name, 2),
+          ['plaintiff_company_name'],
+          'اسم الشركة مطلوب',
+        )
+        need(
+          filled(v.plaintiff_company_register, 1),
+          ['plaintiff_company_register'],
+          'رقم السجل التجاري مطلوب',
+        )
+        need(filled(v.plaintiff_rep_name), ['plaintiff_rep_name'], 'اسم الممثل مطلوب')
+        break
+
+      case 'licence':
+        need(
+          filled(v.plaintiff_licence_name, 2),
+          ['plaintiff_licence_name'],
+          'اسم الترخيص مطلوب',
+        )
+        need(
+          filled(v.plaintiff_licence_number, 1),
+          ['plaintiff_licence_number'],
+          'رقم الترخيص مطلوب',
+        )
+        need(
+          filled(v.plaintiff_owner_name),
+          ['plaintiff_owner_name'],
+          'اسم صاحب الترخيص مطلوب',
+        )
+        need(
+          CIVIL_ID_RE.test(v.plaintiff_owner_civil_id),
+          ['plaintiff_owner_civil_id'],
+          CIVIL_ID_MSG,
+        )
+        need(
+          filled(v.plaintiff_owner_nationality, 2),
+          ['plaintiff_owner_nationality'],
+          'الجنسية مطلوبة',
+        )
+        break
+
+      default:
+        // a request submitted before the party types existed
+        need(filled(v.plaintiff_name), ['plaintiff_name'], 'اسم الطالب مطلوب')
+    }
+
     if (v.arrears_to_month < v.arrears_from_month) {
       ctx.addIssue({
         code: 'custom',
@@ -67,7 +200,22 @@ export const evictionSchema = z
 export type EvictionValues = z.infer<typeof evictionSchema>
 
 export const evictionDefaults: EvictionValues = {
+  plaintiff_type: 'natural',
   plaintiff_name: '',
+  plaintiff_full_name: '',
+  plaintiff_civil_id: '',
+  plaintiff_nationality: 'KW',
+  plaintiff_deceased_name: '',
+  plaintiff_heirs: [{ name: '', civil_id: '', nationality: 'KW' }],
+  plaintiff_company_name: '',
+  plaintiff_company_register: '',
+  plaintiff_rep_role: '',
+  plaintiff_rep_name: '',
+  plaintiff_licence_name: '',
+  plaintiff_licence_number: '',
+  plaintiff_owner_name: '',
+  plaintiff_owner_civil_id: '',
+  plaintiff_owner_nationality: 'KW',
   defendant_name: '',
   defendant_address: '',
   premises_same_as_defendant: true,
@@ -87,17 +235,173 @@ export const evictionDefaults: EvictionValues = {
 const ORDINALS = ['أولاً', 'ثانياً', 'ثالثاً', 'رابعاً', 'خامساً']
 
 const fields: Record<string, FieldDef> = {
-  plaintiff_name: {
-    name: 'plaintiff_name',
-    labelAr: 'اسم الطالب (المدعي)',
-    hintAr:
-      'يُكتب كما يظهر في الصحيفة، مع بيان الجنسية والرقم المدني لكل طالب. اكتب كل طالب في سطر مستقل.',
-    type: 'textarea',
-    rows: 6,
+  plaintiff_type: {
+    name: 'plaintiff_type',
+    labelAr: 'صفة الطالب',
+    hintAr: 'تحدد هذه الصفة الحقول المطلوبة وصياغة اسم الطالب في الصحيفة.',
+    type: 'select',
     required: true,
-    placeholder:
-      'ورثة فلان الفلاني، وهم كل من:\n1-السيد/ ... – كويتي الجنسية – ب.م. (000000000000)',
+    options: [
+      { value: 'natural', labelAr: 'شخص طبيعي' },
+      { value: 'heirs', labelAr: 'ورثة' },
+      { value: 'company', labelAr: 'شركة' },
+      { value: 'licence', labelAr: 'رخصة فردية' },
+    ],
   },
+
+  /* --- شخص طبيعي --- */
+  plaintiff_full_name: {
+    name: 'plaintiff_full_name',
+    labelAr: 'الإسم الكامل',
+    type: 'text',
+    required: true,
+    showWhen: { field: 'plaintiff_type', equals: ['natural'] },
+    placeholder: 'فلان الفلاني الفلاني',
+  },
+  plaintiff_civil_id: {
+    name: 'plaintiff_civil_id',
+    labelAr: 'الرقم المدني',
+    hintAr: 'اثنا عشر رقماً كما تظهر على البطاقة المدنية، بدون فواصل.',
+    type: 'text',
+    required: true,
+    latinDigits: true,
+    showWhen: { field: 'plaintiff_type', equals: ['natural'] },
+    placeholder: '000000000000',
+  },
+  plaintiff_nationality: {
+    name: 'plaintiff_nationality',
+    labelAr: 'الجنسية',
+    type: 'select',
+    required: true,
+    showWhen: { field: 'plaintiff_type', equals: ['natural'] },
+    options: NATIONALITIES.map((n) => ({ value: n.value, labelAr: n.labelAr })),
+  },
+
+  /* --- ورثة --- */
+  plaintiff_deceased_name: {
+    name: 'plaintiff_deceased_name',
+    labelAr: 'اسم المورِّث (المتوفى)',
+    hintAr: 'يُكتب في الصحيفة: «ورثة المرحوم/ …، وهم كل من:».',
+    type: 'text',
+    required: true,
+    showWhen: { field: 'plaintiff_type', equals: ['heirs'] },
+    placeholder: 'فلان الفلاني الفلاني',
+  },
+  plaintiff_heirs: {
+    name: 'plaintiff_heirs',
+    labelAr: 'الورثة',
+    hintAr: 'كل وريث في سطر مستقل في الصحيفة، مرقّماً بالترتيب المدخل هنا.',
+    type: 'rows',
+    required: true,
+    showWhen: { field: 'plaintiff_type', equals: ['heirs'] },
+    rowLabelAr: 'وريث',
+    addLabelAr: 'إضافة وريث',
+    minRows: 1,
+    rowFields: [
+      {
+        name: 'name',
+        labelAr: 'الإسم الكامل',
+        type: 'text',
+        required: true,
+        placeholder: 'فلان الفلاني',
+      },
+      {
+        name: 'civil_id',
+        labelAr: 'الرقم المدني',
+        type: 'text',
+        required: true,
+        latinDigits: true,
+        placeholder: '000000000000',
+      },
+      {
+        name: 'nationality',
+        labelAr: 'الجنسية',
+        type: 'select',
+        required: true,
+        options: NATIONALITIES.map((n) => ({ value: n.value, labelAr: n.labelAr })),
+      },
+    ],
+  },
+
+  /* --- شركة --- */
+  plaintiff_company_name: {
+    name: 'plaintiff_company_name',
+    labelAr: 'اسم الشركة',
+    type: 'text',
+    required: true,
+    showWhen: { field: 'plaintiff_type', equals: ['company'] },
+    placeholder: 'شركة ... للتجارة العامة والمقاولات ذ.م.م',
+  },
+  plaintiff_company_register: {
+    name: 'plaintiff_company_register',
+    labelAr: 'رقم السجل التجاري',
+    type: 'text',
+    required: true,
+    latinDigits: true,
+    showWhen: { field: 'plaintiff_type', equals: ['company'] },
+    placeholder: '000000',
+  },
+  plaintiff_rep_role: {
+    name: 'plaintiff_rep_role',
+    labelAr: 'صفة الممثل (اختياري)',
+    hintAr: 'مثال: المدير العام، رئيس مجلس الإدارة، الوكيل المفوّض.',
+    type: 'text',
+    showWhen: { field: 'plaintiff_type', equals: ['company'] },
+    placeholder: 'المدير العام',
+  },
+  plaintiff_rep_name: {
+    name: 'plaintiff_rep_name',
+    labelAr: 'اسم الممثل',
+    type: 'text',
+    required: true,
+    showWhen: { field: 'plaintiff_type', equals: ['company'] },
+    placeholder: 'فلان الفلاني',
+  },
+
+  /* --- رخصة فردية --- */
+  plaintiff_licence_name: {
+    name: 'plaintiff_licence_name',
+    labelAr: 'اسم الترخيص',
+    type: 'text',
+    required: true,
+    showWhen: { field: 'plaintiff_type', equals: ['licence'] },
+    placeholder: 'مؤسسة ... للتجارة العامة',
+  },
+  plaintiff_licence_number: {
+    name: 'plaintiff_licence_number',
+    labelAr: 'رقم الترخيص',
+    type: 'text',
+    required: true,
+    latinDigits: true,
+    showWhen: { field: 'plaintiff_type', equals: ['licence'] },
+    placeholder: '000000',
+  },
+  plaintiff_owner_name: {
+    name: 'plaintiff_owner_name',
+    labelAr: 'اسم صاحب الترخيص',
+    type: 'text',
+    required: true,
+    showWhen: { field: 'plaintiff_type', equals: ['licence'] },
+    placeholder: 'فلان الفلاني',
+  },
+  plaintiff_owner_civil_id: {
+    name: 'plaintiff_owner_civil_id',
+    labelAr: 'الرقم المدني لصاحب الترخيص',
+    type: 'text',
+    required: true,
+    latinDigits: true,
+    showWhen: { field: 'plaintiff_type', equals: ['licence'] },
+    placeholder: '000000000000',
+  },
+  plaintiff_owner_nationality: {
+    name: 'plaintiff_owner_nationality',
+    labelAr: 'جنسية صاحب الترخيص',
+    type: 'select',
+    required: true,
+    showWhen: { field: 'plaintiff_type', equals: ['licence'] },
+    options: NATIONALITIES.map((n) => ({ value: n.value, labelAr: n.labelAr })),
+  },
+
   defendant_name: {
     name: 'defendant_name',
     labelAr: 'اسم المعلن إليه (المدعى عليه)',
@@ -208,6 +512,72 @@ const fields: Record<string, FieldDef> = {
   },
 }
 
+/**
+ * One person, as a pleading names them:
+ * «فلان الفلاني – كويتي الجنسية – بطاقة مدنية رقم (000000000000)»
+ * Parts the client left empty simply drop out rather than leaving a dangling
+ * dash, which matters for the legacy rows that carry no structured data.
+ */
+function personLine(name: string, civilId: string, nationality: string): string {
+  return [
+    name.trim(),
+    nationality ? `${nationalityLabel(nationality)} الجنسية` : '',
+    civilId ? `بطاقة مدنية رقم (${civilId})` : '',
+  ]
+    .filter(Boolean)
+    .join(' – ')
+}
+
+/** The اسم الطالب block exactly as it is written into the .docx. */
+export function plaintiffLine(values: EvictionValues): string {
+  switch (values.plaintiff_type) {
+    case 'natural':
+      return personLine(
+        values.plaintiff_full_name,
+        values.plaintiff_civil_id,
+        values.plaintiff_nationality,
+      )
+
+    case 'heirs': {
+      const heirs = values.plaintiff_heirs
+        .filter((h) => h.name.trim())
+        .map((h, i) => `${i + 1}- ${personLine(h.name, h.civil_id, h.nationality)}`)
+        .join('\n')
+      const head = `ورثة المرحوم/ ${values.plaintiff_deceased_name.trim()}، وهم كل من:`
+      return heirs ? `${head}\n${heirs}` : head
+    }
+
+    case 'company': {
+      const register = values.plaintiff_company_register
+        ? ` – سجل تجاري رقم (${values.plaintiff_company_register})`
+        : ''
+      const role = values.plaintiff_rep_role.trim()
+      const rep = values.plaintiff_rep_name.trim()
+      const representedBy = rep
+        ? `، ويمثلها ${role ? `${role} ` : ''}السيد/ ${rep}`
+        : ''
+      return `${values.plaintiff_company_name.trim()}${register}${representedBy}`
+    }
+
+    case 'licence': {
+      const number = values.plaintiff_licence_number
+        ? ` – ترخيص رقم (${values.plaintiff_licence_number})`
+        : ''
+      const owner = personLine(
+        values.plaintiff_owner_name,
+        values.plaintiff_owner_civil_id,
+        values.plaintiff_owner_nationality,
+      )
+      const ownedBy = owner ? `، ويملكها السيد/ ${owner}` : ''
+      return `${values.plaintiff_licence_name.trim()}${number}${ownedBy}`
+    }
+
+    default:
+      // submitted before the party types existed: the client typed the block
+      return values.plaintiff_name
+  }
+}
+
 function computeMonths(from: number, to: number) {
   return to - from + 1
 }
@@ -255,7 +625,7 @@ function derive(
   }
 
   const computed: Placeholders = {
-    plaintiff_name: values.plaintiff_name,
+    plaintiff_name: plaintiffLine(values),
     defendant_name: values.defendant_name,
     defendant_address: values.defendant_address,
     premises_address: premises,
@@ -302,6 +672,7 @@ export const evictionTemplate: TemplateDef<EvictionValues> = {
   schema: evictionSchema,
   derive,
   overridable: [
+    { name: 'plaintiff_name', labelAr: 'اسم الطالب كما يظهر في الصحيفة' },
     { name: 'lease_date_phrase', labelAr: 'عبارة تاريخ العقد' },
     { name: 'nonpayment_start_date', labelAr: 'تاريخ بدء الامتناع' },
     { name: 'arrears_months_list', labelAr: 'قائمة الأشهر المتأخرة' },
@@ -320,7 +691,25 @@ export const evictionTemplate: TemplateDef<EvictionValues> = {
     {
       key: 'parties',
       titleAr: 'أطراف الدعوى',
-      fields: [fields.plaintiff_name, fields.defendant_name, fields.defendant_address],
+      fields: [
+        fields.plaintiff_type,
+        fields.plaintiff_full_name,
+        fields.plaintiff_civil_id,
+        fields.plaintiff_nationality,
+        fields.plaintiff_deceased_name,
+        fields.plaintiff_heirs,
+        fields.plaintiff_company_name,
+        fields.plaintiff_company_register,
+        fields.plaintiff_rep_role,
+        fields.plaintiff_rep_name,
+        fields.plaintiff_licence_name,
+        fields.plaintiff_licence_number,
+        fields.plaintiff_owner_name,
+        fields.plaintiff_owner_civil_id,
+        fields.plaintiff_owner_nationality,
+        fields.defendant_name,
+        fields.defendant_address,
+      ],
     },
     {
       key: 'premises',
