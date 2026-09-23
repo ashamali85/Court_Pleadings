@@ -3,7 +3,7 @@
 import { useActionState } from 'react'
 import type { RequestFormState } from '@/app/requests/actions'
 import SectionCard, { Accordion } from '@/components/collapsible'
-import { Field, useFieldValues } from '@/components/fields'
+import { Field, FieldGrid, useFieldValues } from '@/components/fields'
 import LoadingOverlay from '@/components/loading-overlay'
 import SubmitButton from '@/components/submit-button'
 import type { SectionDef } from '@/lib/templates/types'
@@ -64,28 +64,8 @@ export default function RequestForm({
               hasError={hasError}
               errorLabel={labels.needsFix}
             >
-              {section.key === 'arrears' ? (
-                <>
-                  <Field
-                    field={section.fields[0]}
-                    values={values}
-                    errors={errors}
-                    onChange={onChange}
-                  />
-                  <div className="row">
-                    {section.fields.slice(1).map((field) => (
-                      <Field
-                        key={field.name}
-                        field={field}
-                        values={values}
-                        errors={errors}
-                        onChange={onChange}
-                      />
-                    ))}
-                  </div>
-                </>
-              ) : (
-                section.fields.map((field) => (
+              <FieldGrid>
+                {section.fields.map((field) => (
                   <Field
                     key={field.name}
                     field={field}
@@ -93,22 +73,24 @@ export default function RequestForm({
                     errors={errors}
                     onChange={onChange}
                   />
-                ))
-              )}
+                ))}
+              </FieldGrid>
             </SectionCard>
           )
         })}
 
         <SectionCard id="client-note" title={labels.noteSection}>
-          <div className="field">
-            <label htmlFor="clientNote">{labels.noteLabel}</label>
-            <textarea
-              id="clientNote"
-              name="clientNote"
-              rows={3}
-              defaultValue={clientNote ?? ''}
-            />
-          </div>
+          <FieldGrid>
+            <div className="field">
+              <label htmlFor="clientNote">{labels.noteLabel}</label>
+              <textarea
+                id="clientNote"
+                name="clientNote"
+                rows={3}
+                defaultValue={clientNote ?? ''}
+              />
+            </div>
+          </FieldGrid>
         </SectionCard>
       </Accordion>
 

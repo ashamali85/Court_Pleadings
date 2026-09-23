@@ -273,6 +273,8 @@ const ORDINALS = ['أولاً', 'ثانياً', 'ثالثاً', 'رابعاً', 
 const fields: Record<string, FieldDef> = {
   plaintiff_type: {
     name: 'plaintiff_type',
+    width: 'sel',
+    span: 5,
     labelAr: 'صفة الطالب',
     hintAr: 'تحدد هذه الصفة الحقول المطلوبة وصياغة اسم الطالب في الصحيفة.',
     type: 'select',
@@ -288,6 +290,7 @@ const fields: Record<string, FieldDef> = {
   /* --- شخص طبيعي --- */
   plaintiff_full_name: {
     name: 'plaintiff_full_name',
+    width: 'name',
     labelAr: 'الإسم الكامل',
     type: 'text',
     required: true,
@@ -296,6 +299,8 @@ const fields: Record<string, FieldDef> = {
   },
   plaintiff_civil_id: {
     name: 'plaintiff_civil_id',
+    width: 'num',
+    span: 6,
     labelAr: 'الرقم المدني',
     hintAr: 'اثنا عشر رقماً كما تظهر على البطاقة المدنية، بدون فواصل.',
     type: 'text',
@@ -306,6 +311,8 @@ const fields: Record<string, FieldDef> = {
   },
   plaintiff_nationality: {
     name: 'plaintiff_nationality',
+    width: 'sel',
+    span: 6,
     labelAr: 'الجنسية',
     type: 'select',
     required: true,
@@ -316,6 +323,7 @@ const fields: Record<string, FieldDef> = {
   /* --- ورثة --- */
   plaintiff_deceased_name: {
     name: 'plaintiff_deceased_name',
+    width: 'name',
     labelAr: 'اسم المورِّث (المتوفى)',
     hintAr: 'يُكتب في الصحيفة: «ورثة المرحوم/ …، وهم كل من:».',
     type: 'text',
@@ -336,6 +344,7 @@ const fields: Record<string, FieldDef> = {
     rowFields: [
       {
         name: 'name',
+        width: 'name',
         labelAr: 'الإسم الكامل',
         type: 'text',
         required: true,
@@ -343,6 +352,8 @@ const fields: Record<string, FieldDef> = {
       },
       {
         name: 'civil_id',
+        width: 'num',
+        span: 6,
         labelAr: 'الرقم المدني',
         type: 'text',
         required: true,
@@ -351,6 +362,8 @@ const fields: Record<string, FieldDef> = {
       },
       {
         name: 'nationality',
+        width: 'sel',
+        span: 6,
         labelAr: 'الجنسية',
         type: 'select',
         required: true,
@@ -362,6 +375,7 @@ const fields: Record<string, FieldDef> = {
   /* --- شركة --- */
   plaintiff_company_name: {
     name: 'plaintiff_company_name',
+    width: 'org',
     labelAr: 'اسم الشركة',
     type: 'text',
     required: true,
@@ -370,6 +384,8 @@ const fields: Record<string, FieldDef> = {
   },
   plaintiff_company_form: {
     name: 'plaintiff_company_form',
+    width: 'sel',
+    span: 6,
     labelAr: 'شكل الشركة',
     type: 'select',
     required: true,
@@ -378,6 +394,8 @@ const fields: Record<string, FieldDef> = {
   },
   plaintiff_company_register: {
     name: 'plaintiff_company_register',
+    width: 'reg',
+    span: 6,
     labelAr: 'رقم السجل التجاري',
     type: 'text',
     required: true,
@@ -387,6 +405,8 @@ const fields: Record<string, FieldDef> = {
   },
   plaintiff_company_civil_no: {
     name: 'plaintiff_company_civil_no',
+    width: 'reg',
+    span: 6,
     labelAr: 'رقم الجهة المدني',
     hintAr: 'الرقم المدني للجهة الصادر من الهيئة العامة للمعلومات المدنية.',
     type: 'text',
@@ -399,6 +419,7 @@ const fields: Record<string, FieldDef> = {
   /* --- رخصة فردية --- */
   plaintiff_establishment_name: {
     name: 'plaintiff_establishment_name',
+    width: 'org',
     labelAr: 'اسم المنشأة (حسب رخصة وزارة التجارة)',
     type: 'text',
     required: true,
@@ -407,6 +428,7 @@ const fields: Record<string, FieldDef> = {
   },
   plaintiff_owner_name: {
     name: 'plaintiff_owner_name',
+    width: 'name',
     labelAr: 'اسم صاحب المنشأة الكامل',
     type: 'text',
     required: true,
@@ -415,6 +437,8 @@ const fields: Record<string, FieldDef> = {
   },
   plaintiff_owner_civil_id: {
     name: 'plaintiff_owner_civil_id',
+    width: 'num',
+    span: 6,
     labelAr: 'الرقم المدني لصاحب المنشأة',
     hintAr: 'اثنا عشر رقماً كما تظهر على البطاقة المدنية، بدون فواصل.',
     type: 'text',
@@ -425,6 +449,8 @@ const fields: Record<string, FieldDef> = {
   },
   plaintiff_owner_nationality: {
     name: 'plaintiff_owner_nationality',
+    width: 'sel',
+    span: 6,
     labelAr: 'جنسية صاحب المنشأة',
     type: 'select',
     required: true,
@@ -433,6 +459,8 @@ const fields: Record<string, FieldDef> = {
   },
   plaintiff_licence_register: {
     name: 'plaintiff_licence_register',
+    width: 'reg',
+    span: 6,
     labelAr: 'رقم السجل التجاري',
     type: 'text',
     required: true,
@@ -442,6 +470,8 @@ const fields: Record<string, FieldDef> = {
   },
   plaintiff_licence_civil_no: {
     name: 'plaintiff_licence_civil_no',
+    width: 'reg',
+    span: 6,
     labelAr: 'رقم الجهة المدني',
     hintAr: 'الرقم المدني للجهة الصادر من الهيئة العامة للمعلومات المدنية.',
     type: 'text',
@@ -474,6 +504,8 @@ const fields: Record<string, FieldDef> = {
   },
   premises_lead: {
     name: 'premises_lead',
+    width: 'sel',
+    span: 5,
     labelAr: 'نوع العين المؤجرة',
     hintAr: 'تُكتب في الصحيفة قبل العنوان: «يستأجر المعلن إليه من الطالب …».',
     type: 'select',
@@ -497,6 +529,8 @@ const fields: Record<string, FieldDef> = {
   },
   lease_date: {
     name: 'lease_date',
+    width: 'date',
+    span: 6,
     labelAr: 'تاريخ عقد الإيجار',
     hintAr: 'اختر التاريخ من التقويم. يُستخرج اسم اليوم تلقائياً للصحيفة.',
     type: 'date',
@@ -505,6 +539,8 @@ const fields: Record<string, FieldDef> = {
   },
   property_use: {
     name: 'property_use',
+    width: 'name',
+    span: 6,
     labelAr: 'غرض استعمال العين المؤجرة',
     type: 'text',
     required: true,
@@ -512,6 +548,9 @@ const fields: Record<string, FieldDef> = {
   },
   monthly_rent: {
     name: 'monthly_rent',
+    width: 'money',
+    span: 6,
+    latinDigits: true,
     labelAr: 'قيمة الأجرة الشهرية (د.ك)',
     hintAr: 'الرقم فقط، مثال 450 أو 450.500. يُكتب المبلغ بالحروف تلقائياً في الصحيفة.',
     type: 'number',
@@ -520,6 +559,7 @@ const fields: Record<string, FieldDef> = {
   },
   nonpayment_start_date: {
     name: 'nonpayment_start_date',
+    width: 'date',
     labelAr: 'تاريخ بدء الامتناع عن سداد الأجرة (اختياري)',
     hintAr:
       'إذا تُرك فارغاً يُحتسب تلقائياً كأول يوم من شهر بداية المطالبة، مثال 1/3/2024',
@@ -528,6 +568,8 @@ const fields: Record<string, FieldDef> = {
   },
   arrears_from_month: {
     name: 'arrears_from_month',
+    width: 'short',
+    span: 4,
     labelAr: 'من شهر',
     type: 'select',
     required: true,
@@ -535,6 +577,8 @@ const fields: Record<string, FieldDef> = {
   },
   arrears_to_month: {
     name: 'arrears_to_month',
+    width: 'short',
+    span: 4,
     labelAr: 'إلى شهر',
     type: 'select',
     required: true,
@@ -542,6 +586,8 @@ const fields: Record<string, FieldDef> = {
   },
   arrears_year: {
     name: 'arrears_year',
+    width: 'short',
+    span: 4,
     labelAr: 'السنة',
     type: 'select',
     required: true,

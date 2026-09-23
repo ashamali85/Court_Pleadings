@@ -1,5 +1,6 @@
 'use client'
 
+import type { CSSProperties, ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import DateField from '@/components/date-field'
 import type { FieldDef } from '@/lib/templates/types'
@@ -10,6 +11,31 @@ function str(v: unknown): string {
   if (v === null || v === undefined) return ''
   if (typeof v === 'boolean') return v ? 'true' : ''
   return String(v)
+}
+
+/**
+ * The 12-column form column. Each Field places itself with `--span`, so a
+ * section's layout is data on the field and not a special case in the page.
+ */
+export function FieldGrid({ children }: { children: ReactNode }) {
+  return <div className="form-grid">{children}</div>
+}
+
+/** `.w-num`, `.w-sel`, … — the control's width, named after its content. */
+function widthClass(field: FieldDef): string | undefined {
+  if (!field.width || field.width === 'full') return undefined
+  return `w-${field.width}`
+}
+
+/** A Latin-digit field reads left-to-right even inside an RTL form. */
+function controlClass(field: FieldDef): string | undefined {
+  const classes = [widthClass(field), field.latinDigits ? 'num' : null].filter(Boolean)
+  return classes.length ? classes.join(' ') : undefined
+}
+
+function spanStyle(field: FieldDef): CSSProperties | undefined {
+  if (!field.span || field.span === 12) return undefined
+  return { '--span': field.span } as CSSProperties
 }
 
 /** Small ؟ button that reveals the field's guidance on click. */
@@ -122,9 +148,10 @@ export function Field({
 
   const value = mirrored ?? str(values[field.name])
   const isDisabled = disabled || mirrored !== null
+  const control = controlClass(field)
 
   return (
-    <div className="field">
+    <div className="field" style={spanStyle(field)}>
       <div className="label-row">
         <label htmlFor={field.name}>
           {field.labelAr}
@@ -139,6 +166,7 @@ export function Field({
         <DateField
           id={field.name}
           name={field.name}
+          className={widthClass(field)}
           value={value}
           onChange={(next) => onChange(field.name, next)}
           disabled={isDisabled}
@@ -148,6 +176,7 @@ export function Field({
         <textarea
           id={field.name}
           name={field.name}
+          className={control}
           rows={field.rows ?? 4}
           value={value}
           placeholder={field.placeholder}
@@ -158,6 +187,7 @@ export function Field({
         <select
           id={field.name}
           name={field.name}
+          className={widthClass(field)}
           value={value}
           onChange={(e) => onChange(field.name, e.target.value)}
           disabled={isDisabled}
@@ -173,6 +203,7 @@ export function Field({
           id={field.name}
           name={field.name}
           type="text"
+          className={control}
           inputMode={field.type === 'number' ? 'decimal' : undefined}
           value={value}
           placeholder={field.placeholder}
@@ -276,12 +307,12 @@ function RowsField({
               ) : null}
             </div>
 
-            <div className="row">
+            <div className="form-grid">
               {(field.rowFields ?? []).map((sub) => {
                 const id = `${field.name}-${index}-${sub.name}`
                 const subError = errors[`${field.name}.${index}.${sub.name}`]
                 return (
-                  <div className="field" key={sub.name}>
+                  <div className="field" key={sub.name} style={spanStyle(sub)}>
                     <div className="label-row">
                       <label htmlFor={id}>
                         {sub.labelAr}
@@ -291,6 +322,7 @@ function RowsField({
                     {sub.type === 'select' ? (
                       <select
                         id={id}
+                        className={widthClass(sub)}
                         value={row[sub.name] ?? ''}
                         onChange={(e) => setRow(index, sub.name, e.target.value)}
                         disabled={disabled}
@@ -306,6 +338,7 @@ function RowsField({
                       <input
                         id={id}
                         type="text"
+                        className={controlClass(sub)}
                         inputMode={sub.latinDigits ? 'numeric' : undefined}
                         value={row[sub.name] ?? ''}
                         placeholder={sub.placeholder}

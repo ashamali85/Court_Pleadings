@@ -10,6 +10,14 @@ export type FieldType =
   /** a repeatable group of fields — one heir, one partner, one row */
   | 'rows'
 
+/**
+ * How wide the control should be, named after the kind of value it holds
+ * rather than a number of pixels. Resolves to a `--field-w-*` token.
+ * Omitted means the control fills its grid cell — right for free prose.
+ */
+export type FieldWidth =
+  'short' | 'reg' | 'money' | 'num' | 'date' | 'sel' | 'name' | 'org' | 'full'
+
 export type FieldDef = {
   name: string
   labelAr: string
@@ -17,6 +25,11 @@ export type FieldDef = {
   type: FieldType
   required?: boolean
   options?: { value: string; labelAr: string }[]
+  /** control width; see FieldWidth */
+  width?: FieldWidth
+  /** columns out of 12 the field occupies, so two short fields can share a
+      line. Default 12 — one field per line. Collapses to 12 under 640px. */
+  span?: number
   /** for a "same as …" checkbox: which field this one mirrors when ticked */
   mirrorOf?: string
   /** show this field only when the named boolean field is false */

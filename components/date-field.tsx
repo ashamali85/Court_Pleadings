@@ -47,6 +47,7 @@ export default function DateField({
   onChange,
   disabled,
   placeholder,
+  className,
   clearLabel = 'Clear',
   todayLabel = 'Today',
 }: {
@@ -56,6 +57,8 @@ export default function DateField({
   onChange: (value: string) => void
   disabled?: boolean
   placeholder?: string
+  /** width class from the field definition, e.g. `w-date` */
+  className?: string
   clearLabel?: string
   todayLabel?: string
 }) {
@@ -117,7 +120,7 @@ export default function DateField({
       <button
         type="button"
         id={id}
-        className="date-trigger"
+        className={className ? `date-trigger ${className}` : 'date-trigger'}
         disabled={disabled}
         aria-haspopup="dialog"
         aria-expanded={open}

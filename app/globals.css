@@ -18,7 +18,13 @@
   --blue-50: #1b67d5;
   --blue-10: #edf4ff;
   --slate-90: #10284f;
+  --slate-70: #1b3557; /* label ink — 12.4:1 on white */
   --slate-50: #526484; /* was #64748b — 4.33:1 on the app ground, now 5.43:1 */
+  --slate-40: #5a7090; /* placeholder — 4.5:1 on the field fill */
+  --slate-30: #7689a8; /* field underline — 3.6:1 on white, 3.2:1 on the fill */
+  --slate-25: #cdd8e8; /* field side edges */
+  --slate-18: #e6edf7; /* field fill, hover */
+  --slate-15: #eef3fa; /* field fill */
   --slate-10: #f6f9fc;
   --slate-05: #eef5fb;
   --white: #ffffff;
@@ -72,6 +78,24 @@
   --weight-medium: 600;
   --weight-bold: 700;
 
+  /* Field widths, in ch, sized to the longest value the field can hold. A
+     12-digit civil ID in a 900px box tells the client nothing about what to
+     type; 18ch does. `ch` and not px, so the width tracks the font.
+
+     These are border-box widths, so ~34px of padding and border come out of
+     them before any text fits, and a numeric field resolves `ch` against the
+     Latin font that .num switches it to — hence the headroom: a 12-digit ID
+     measures 126px and 18ch leaves 154px, enough for a wider fallback face. */
+  --field-w-short: 12ch; /* a select with one- or four-character options */
+  --field-w-reg: 15ch; /* commercial register, civil number */
+  --field-w-money: 15ch; /* an amount in KD */
+  --field-w-num: 18ch; /* 12-digit civil ID */
+  --field-w-date: 21ch; /* «يوم/شهر/سنة» plus the calendar icon, on one line */
+  --field-w-sel: 22ch; /* nationality, party type, month */
+  --field-w-name: 36ch; /* a person's full name */
+  --field-w-org: 46ch; /* a company or establishment name */
+  --form-max: 680px; /* a single form column stays inside comfortable measure */
+
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 20px;
@@ -97,6 +121,18 @@
   --ink: var(--slate-90);
   --ink-soft: var(--slate-50);
   --ink-on-brand: var(--white);
+
+  /* A filled control. The 2px underline is what tells the eye "this is a box
+     you type into", so it is the one that has to clear WCAG 1.4.11's 3:1
+     (3.6:1 on the card, 3.2:1 on the fill). The fill and the side edges are
+     decoration and are measured against nothing. */
+  --ink-label: var(--slate-70);
+  --ink-placeholder: var(--slate-40);
+  --field-bg: var(--slate-15);
+  --field-bg-hover: var(--slate-18);
+  --field-edge: var(--slate-25);
+  --field-underline: var(--slate-30);
+  --field-underline-hover: var(--slate-50);
 
   --line: var(--alpha-line);
   --brand: var(--blue-70);
@@ -438,19 +474,26 @@ main {
   color: var(--ink-soft);
 }
 
-/* ---------- forms ---------- */
+/* ---------- forms ----------
+
+   Three things separate a label from its control, and all three are needed:
+   colour (label is --ink-label at 12.4:1, the placeholder inside the box is
+   --ink-placeholder at 4.5:1), fill (the control is tinted, the card is not),
+   and proximity — 8px from a label to its own control against 24px between
+   one group and the next, so the eye binds the right pairs. */
 
 .field {
   margin-bottom: var(--space-5);
 }
 
-/* label = caption: smaller, secondary colour, sits tight to its own control.
+/* label = caption: smaller and lighter in weight than the value, but dark, so
+   it never reads as the same text as the hint inside the box.
    value = content: full-contrast ink, larger. The value wins the hierarchy. */
 .field label {
   display: block;
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
-  color: var(--ink-soft);
+  color: var(--ink-label);
   margin-bottom: var(--space-2);
   letter-spacing: 0.1px;
 }
@@ -471,12 +514,17 @@ input[type='email'],
 input[type='password'],
 input[type='number'],
 textarea,
-select {
+select,
+.date-trigger {
   width: 100%;
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--line);
+  max-width: 100%;
+  /* 1px off the bottom padding pays for the 2px underline, so the value stays
+     optically centred against a 1px-bordered neighbour */
+  padding: var(--space-3) var(--space-4) calc(var(--space-3) - 1px);
+  border: 1px solid var(--field-edge);
+  border-bottom: 2px solid var(--field-underline);
   border-radius: var(--radius-md);
-  background: var(--surface);
+  background: var(--field-bg);
   color: var(--ink);
   font: inherit;
   font-size: var(--text-md);
@@ -488,8 +536,15 @@ select {
 
 input::placeholder,
 textarea::placeholder {
-  color: var(--ink-soft);
+  color: var(--ink-placeholder);
   font-weight: var(--weight-regular);
+}
+
+input:hover:not([disabled]),
+textarea:hover:not([disabled]),
+select:hover:not([disabled]) {
+  background: var(--field-bg-hover);
+  border-bottom-color: var(--field-underline-hover);
 }
 
 textarea {
@@ -501,6 +556,7 @@ input:focus,
 textarea:focus,
 select:focus {
   border-color: var(--brand-2);
+  background: var(--surface);
 }
 
 /* the invalid state belongs on the control, and only after the user has
@@ -518,6 +574,85 @@ textarea[disabled],
 select[disabled] {
   background: var(--surface-2);
   color: var(--ink-soft);
+  border-bottom-color: var(--field-edge);
+}
+
+/* ---------- field widths ----------
+
+   A control is as wide as the longest value it can hold, never wider. The
+   element is named in every selector so these beat the `input[type=…]` rule
+   above, which is a class-level specificity of its own. max-width keeps all of
+   them inside a narrow viewport. */
+
+.field :is(input, select, textarea, .date-trigger).w-short {
+  width: var(--field-w-short);
+}
+
+.field :is(input, select, textarea, .date-trigger).w-reg {
+  width: var(--field-w-reg);
+}
+
+.field :is(input, select, textarea, .date-trigger).w-money {
+  width: var(--field-w-money);
+}
+
+.field :is(input, select, textarea, .date-trigger).w-num {
+  width: var(--field-w-num);
+}
+
+.field :is(input, select, textarea, .date-trigger).w-date {
+  width: var(--field-w-date);
+}
+
+.field :is(input, select, textarea, .date-trigger).w-sel {
+  width: var(--field-w-sel);
+}
+
+.field :is(input, select, textarea, .date-trigger).w-name {
+  width: var(--field-w-name);
+}
+
+.field :is(input, select, textarea, .date-trigger).w-org {
+  width: var(--field-w-org);
+}
+
+/* A run of Latin digits inside an RTL field: force the run left-to-right so
+   the digits read in the right order, but keep it against the start edge. */
+.field :is(input, textarea).num {
+  direction: ltr;
+  text-align: right;
+  font-family: var(--font-latin);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- the form column ----------
+
+   12 columns so two short controls can share a line, capped at a comfortable
+   measure. One column below 640px — paired fields would be narrower than
+   their own labels. */
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--space-5) var(--space-4);
+  max-width: var(--form-max);
+}
+
+.form-grid > .field {
+  grid-column: span var(--span, 12);
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .form-grid > .field {
+    grid-column: span 12;
+  }
+}
+
+/* a grid nested in a row card is already inside a narrow column */
+.rows-item .form-grid {
+  max-width: none;
 }
 
 .checkbox {
@@ -552,10 +687,12 @@ select[disabled] {
   gap: var(--space-3);
 }
 
+/* the card stays white so the tinted controls inside it still read as controls;
+   its own edge is what separates one heir from the next */
 .rows-item {
-  border: 1px solid var(--line);
+  border: 1px solid var(--field-edge);
   border-radius: var(--radius-md);
-  background: var(--surface-2);
+  background: var(--surface);
   padding: var(--space-4);
 }
 
@@ -911,37 +1048,41 @@ tbody tr:hover {
   position: relative;
 }
 
+/* the box itself comes from the shared control rule above — only the trigger's
+   own layout lives here */
 .date-trigger {
-  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  font-size: var(--text-md);
-  font-weight: var(--weight-medium);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
   cursor: pointer;
   text-align: start;
-  transition: border-color var(--dur-fast) var(--ease-out);
 }
 
 .date-trigger:hover:not(:disabled) {
-  border-color: var(--brand-2);
+  background: var(--field-bg-hover);
+  border-bottom-color: var(--field-underline-hover);
 }
 
 .date-trigger:disabled {
   background: var(--surface-2);
   color: var(--ink-soft);
+  border-bottom-color: var(--field-edge);
   cursor: not-allowed;
 }
 
 .date-trigger[aria-expanded='true'] {
   border-color: var(--brand-2);
+  background: var(--surface);
+}
+
+/* the trigger is a fixed-width flex box — its label must not wrap onto a
+   second line and grow the control */
+.date-value,
+.date-placeholder {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .date-value {
@@ -952,7 +1093,7 @@ tbody tr:hover {
 }
 
 .date-placeholder {
-  color: var(--ink-soft);
+  color: var(--ink-placeholder);
 }
 
 .date-icon {

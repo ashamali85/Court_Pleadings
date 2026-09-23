@@ -1,9 +1,10 @@
 'use client'
 
+import type { CSSProperties } from 'react'
 import { useActionState, useRef } from 'react'
 import { rejectRequest, submitReview, type ReviewState } from '@/app/admin/actions'
 import SectionCard, { Accordion } from '@/components/collapsible'
-import { Field, useFieldValues } from '@/components/fields'
+import { Field, FieldGrid, useFieldValues } from '@/components/fields'
 import LoadingOverlay from '@/components/loading-overlay'
 import SubmitButton from '@/components/submit-button'
 import type { SectionDef } from '@/lib/templates/types'
@@ -110,28 +111,8 @@ export default function ReviewForm({
               hasError={hasError}
               errorLabel={labels.needsFix}
             >
-              {section.key === 'arrears' ? (
-                <>
-                  <Field
-                    field={section.fields[0]}
-                    values={values}
-                    errors={errors}
-                    onChange={onChange}
-                  />
-                  <div className="row">
-                    {section.fields.slice(1).map((field) => (
-                      <Field
-                        key={field.name}
-                        field={field}
-                        values={values}
-                        errors={errors}
-                        onChange={onChange}
-                      />
-                    ))}
-                  </div>
-                </>
-              ) : (
-                section.fields.map((field) => (
+              <FieldGrid>
+                {section.fields.map((field) => (
                   <Field
                     key={field.name}
                     field={field}
@@ -139,8 +120,8 @@ export default function ReviewForm({
                     errors={errors}
                     onChange={onChange}
                   />
-                ))
-              )}
+                ))}
+              </FieldGrid>
             </SectionCard>
           )
         })}
@@ -163,9 +144,13 @@ export default function ReviewForm({
           badge={overrideCount > 0 ? String(overrideCount) : undefined}
         >
           <p className="muted">{labels.overrideHint}</p>
-          <div className="row">
+          <FieldGrid>
             {overridable.map((item) => (
-              <div className="field" key={item.name}>
+              <div
+                className="field"
+                key={item.name}
+                style={{ '--span': 6 } as CSSProperties}
+              >
                 <label htmlFor={`override__${item.name}`}>{item.labelAr}</label>
                 <input
                   id={`override__${item.name}`}
@@ -176,7 +161,7 @@ export default function ReviewForm({
                 />
               </div>
             ))}
-          </div>
+          </FieldGrid>
         </SectionCard>
 
         <div className="card">
