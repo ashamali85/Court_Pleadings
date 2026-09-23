@@ -2,7 +2,9 @@
 
 import type { CSSProperties, ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
+import Combobox, { type ComboOption } from '@/components/combobox'
 import DateField from '@/components/date-field'
+import { flagSrc } from '@/lib/nationalities'
 import type { FieldDef } from '@/lib/templates/types'
 
 type Values = Record<string, unknown>
@@ -36,6 +38,24 @@ function controlClass(field: FieldDef): string | undefined {
 function spanStyle(field: FieldDef): CSSProperties | undefined {
   if (!field.span || field.span === 12) return undefined
   return { '--span': field.span } as CSSProperties
+}
+
+/**
+ * The flag beside an option. The combobox decides which options are close
+ * enough to the scroll box to draw at all, so this is only ever called for a
+ * flag that is about to be seen; width and height are set so the row does not
+ * shift when the file lands.
+ */
+function flagIcon(option: ComboOption): ReactNode {
+  const src = flagSrc(option.value)
+  if (!src) return <span className="flag flag-none" />
+  return (
+    <img className="flag" src={src} alt="" width={21} height={16} decoding="async" />
+  )
+}
+
+function optionIconFor(field: FieldDef) {
+  return field.optionIcon === 'flag' ? flagIcon : undefined
 }
 
 /** Small ؟ button that reveals the field's guidance on click. */
@@ -183,6 +203,19 @@ export function Field({
           onChange={(e) => onChange(field.name, e.target.value)}
           disabled={isDisabled}
         />
+      ) : field.type === 'select' && field.searchable ? (
+        <Combobox
+          id={field.name}
+          name={field.name}
+          className={widthClass(field)}
+          value={value}
+          options={field.options ?? []}
+          icon={optionIconFor(field)}
+          onChange={(next) => onChange(field.name, next)}
+          disabled={isDisabled}
+          placeholder={field.placeholder}
+          invalid={Boolean(error)}
+        />
       ) : field.type === 'select' ? (
         <select
           id={field.name}
@@ -319,7 +352,19 @@ function RowsField({
                         {sub.required ? <span className="req">*</span> : null}
                       </label>
                     </div>
-                    {sub.type === 'select' ? (
+                    {sub.type === 'select' && sub.searchable ? (
+                      <Combobox
+                        id={id}
+                        className={widthClass(sub)}
+                        value={row[sub.name] ?? ''}
+                        options={sub.options ?? []}
+                        icon={optionIconFor(sub)}
+                        onChange={(next) => setRow(index, sub.name, next)}
+                        disabled={disabled}
+                        placeholder={sub.placeholder}
+                        invalid={Boolean(subError)}
+                      />
+                    ) : sub.type === 'select' ? (
                       <select
                         id={id}
                         className={widthClass(sub)}

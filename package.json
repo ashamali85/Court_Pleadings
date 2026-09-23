@@ -10,7 +10,9 @@
     "db:push": "prisma db push && prisma generate",
     "db:seed": "tsx prisma/seed.ts",
     "template:build": "python3 scripts/build_template.py",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "smoke": "tsx scripts/smoke.ts",
+    "search:check": "tsx scripts/search-check.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",

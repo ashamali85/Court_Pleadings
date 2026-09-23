@@ -509,7 +509,10 @@ main {
   margin-bottom: var(--space-2);
 }
 
-input[type='text'],
+/* `:not(.combo-input)` because the combobox's text input is not a field — the
+   box around it is. Excluding it here is cleaner than out-specifying every
+   rule in this block from the combobox's own section. */
+input[type='text']:not(.combo-input),
 input[type='email'],
 input[type='password'],
 input[type='number'],
@@ -534,13 +537,13 @@ select,
     background-color var(--dur-fast) var(--ease-out);
 }
 
-input::placeholder,
+input:not(.combo-input)::placeholder,
 textarea::placeholder {
   color: var(--ink-placeholder);
   font-weight: var(--weight-regular);
 }
 
-input:hover:not([disabled]),
+input:hover:not([disabled], .combo-input),
 textarea:hover:not([disabled]),
 select:hover:not([disabled]) {
   background: var(--field-bg-hover);
@@ -552,7 +555,7 @@ textarea {
   line-height: var(--leading-loose);
 }
 
-input:focus,
+input:focus:not(.combo-input),
 textarea:focus,
 select:focus {
   border-color: var(--brand-2);
@@ -561,15 +564,15 @@ select:focus {
 
 /* the invalid state belongs on the control, and only after the user has
    actually interacted with it — :user-invalid, not :invalid */
-input:user-invalid,
+input:user-invalid:not(.combo-input),
 textarea:user-invalid,
 select:user-invalid,
-[aria-invalid='true'] {
+[aria-invalid='true']:not(.combo-input) {
   border-color: var(--danger);
   background: var(--danger-tint);
 }
 
-input[disabled],
+input[disabled]:not(.combo-input),
 textarea[disabled],
 select[disabled] {
   background: var(--surface-2);
@@ -584,35 +587,35 @@ select[disabled] {
    above, which is a class-level specificity of its own. max-width keeps all of
    them inside a narrow viewport. */
 
-.field :is(input, select, textarea, .date-trigger).w-short {
+.field :is(input, select, textarea, .date-trigger, .combo-control).w-short {
   width: var(--field-w-short);
 }
 
-.field :is(input, select, textarea, .date-trigger).w-reg {
+.field :is(input, select, textarea, .date-trigger, .combo-control).w-reg {
   width: var(--field-w-reg);
 }
 
-.field :is(input, select, textarea, .date-trigger).w-money {
+.field :is(input, select, textarea, .date-trigger, .combo-control).w-money {
   width: var(--field-w-money);
 }
 
-.field :is(input, select, textarea, .date-trigger).w-num {
+.field :is(input, select, textarea, .date-trigger, .combo-control).w-num {
   width: var(--field-w-num);
 }
 
-.field :is(input, select, textarea, .date-trigger).w-date {
+.field :is(input, select, textarea, .date-trigger, .combo-control).w-date {
   width: var(--field-w-date);
 }
 
-.field :is(input, select, textarea, .date-trigger).w-sel {
+.field :is(input, select, textarea, .date-trigger, .combo-control).w-sel {
   width: var(--field-w-sel);
 }
 
-.field :is(input, select, textarea, .date-trigger).w-name {
+.field :is(input, select, textarea, .date-trigger, .combo-control).w-name {
   width: var(--field-w-name);
 }
 
-.field :is(input, select, textarea, .date-trigger).w-org {
+.field :is(input, select, textarea, .date-trigger, .combo-control).w-org {
   width: var(--field-w-org);
 }
 
@@ -623,6 +626,174 @@ select[disabled] {
   text-align: right;
   font-family: var(--font-latin);
   font-variant-numeric: tabular-nums;
+}
+
+/* ---------- combobox (type-to-search select) ----------
+
+   The control is a filled box like every other, with the text input stretched
+   inside it — so the box, not the input, carries the fill, the underline and
+   the focus ring, and a nationality field is indistinguishable from a plain
+   one until you type into it. */
+
+.combo {
+  position: relative;
+}
+
+.combo-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 100%;
+  padding: var(--space-3) var(--space-4) calc(var(--space-3) - 1px);
+  border: 1px solid var(--field-edge);
+  border-bottom: 2px solid var(--field-underline);
+  border-radius: var(--radius-md);
+  background: var(--field-bg);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+.combo-control:hover {
+  background: var(--field-bg-hover);
+  border-bottom-color: var(--field-underline-hover);
+}
+
+/* the ring belongs on the box the user sees, not the bare input inside it */
+.combo-control:focus-within {
+  border-color: var(--brand-2);
+  background: var(--surface);
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.combo-control:has(.combo-input[aria-invalid='true']) {
+  border-color: var(--danger);
+  background: var(--danger-tint);
+}
+
+.combo-control:has(.combo-input:disabled) {
+  background: var(--surface-2);
+  border-bottom-color: var(--field-edge);
+}
+
+/* The input is only the text; the styled box around it is the control. The
+   element is named so this beats the `input[type=text]` rule above, which is a
+   class-level specificity of its own. */
+input.combo-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  text-overflow: ellipsis;
+}
+
+input.combo-input:focus,
+input.combo-input:focus-visible {
+  outline: none;
+}
+
+input.combo-input::placeholder {
+  color: var(--ink-placeholder);
+  font-weight: var(--weight-regular);
+}
+
+.combo-chev {
+  flex: none;
+  color: var(--ink-soft);
+  font-size: var(--text-lg);
+  line-height: 0.6;
+  pointer-events: none;
+}
+
+/* holds the flag's box whether or not the flag has been drawn yet, so a row
+   never reflows as the list scrolls */
+.combo-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  width: 21px;
+  height: 16px;
+}
+
+.flag {
+  width: 21px;
+  height: 16px;
+  border-radius: 2px;
+  /* many flags are white at the edge; without this they dissolve into the box */
+  box-shadow: 0 0 0 1px var(--alpha-ink-18);
+  object-fit: cover;
+  display: block;
+}
+
+.flag-none {
+  background: var(--surface-2);
+}
+
+.combo-list {
+  position: absolute;
+  z-index: 40;
+  inset-inline: 0;
+  top: calc(100% + var(--space-1));
+  max-height: 320px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--field-edge);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+}
+
+.combo-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-md);
+  line-height: 1.6;
+  cursor: pointer;
+}
+
+/* the highlight is a fill *and* a weight change — never colour alone */
+.combo-option[data-active='true'] {
+  background: var(--brand-tint);
+  color: var(--brand-dark);
+  font-weight: var(--weight-medium);
+}
+
+.combo-option[aria-selected='true'] .combo-label {
+  font-weight: var(--weight-bold);
+}
+
+.combo-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combo-tick {
+  flex: none;
+  color: var(--brand-2);
+  font-size: var(--text-sm);
+}
+
+.combo-empty {
+  padding: var(--space-3);
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+  text-align: center;
 }
 
 /* ---------- the form column ----------

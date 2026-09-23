@@ -25,6 +25,10 @@ export type FieldDef = {
   type: FieldType
   required?: boolean
   options?: { value: string; labelAr: string }[]
+  /** a select with too many options to scroll: type to filter instead */
+  searchable?: boolean
+  /** draw a small picture beside each option — 'flag' keys off the ISO code */
+  optionIcon?: 'flag'
   /** control width; see FieldWidth */
   width?: FieldWidth
   /** columns out of 12 the field occupies, so two short fields can share a

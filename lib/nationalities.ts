@@ -14,6 +14,9 @@
 
 export type Nationality = { value: string; labelAr: string }
 
+/** not an ISO code; «بدون» is common enough in Kuwait to be a real option */
+export const STATELESS = 'STATELESS'
+
 const GCC: Nationality[] = [
   { value: 'KW', labelAr: 'كويتي' },
   { value: 'SA', labelAr: 'سعودي' },
@@ -225,7 +228,7 @@ export const NATIONALITIES: Nationality[] = [
   ...GCC,
   ...ARAB,
   ...[...REST].sort((a, b) => arabicCollator.compare(a.labelAr, b.labelAr)),
-  { value: 'STATELESS', labelAr: 'بدون جنسية' },
+  { value: STATELESS, labelAr: 'بدون جنسية' },
 ]
 
 const BY_CODE = new Map(NATIONALITIES.map((n) => [n.value, n.labelAr]))
@@ -237,4 +240,14 @@ export function nationalityLabel(code: string): string {
 
 export function isNationalityCode(code: string): boolean {
   return BY_CODE.has(code)
+}
+
+/**
+ * The flag for an ISO code, served from public/flags. Emoji flags are not an
+ * option: Windows ships no flag glyphs, so 🇰🇼 renders as the letters "KW" on
+ * most of this office's clients. STATELESS has no country and so no flag.
+ */
+export function flagSrc(code: string): string | null {
+  if (!isNationalityCode(code) || code === STATELESS) return null
+  return `/flags/${code.toLowerCase()}.svg`
 }

@@ -311,6 +311,8 @@ const fields: Record<string, FieldDef> = {
   },
   plaintiff_nationality: {
     name: 'plaintiff_nationality',
+    searchable: true,
+    optionIcon: 'flag',
     width: 'sel',
     span: 6,
     labelAr: 'الجنسية',
@@ -362,6 +364,8 @@ const fields: Record<string, FieldDef> = {
       },
       {
         name: 'nationality',
+        searchable: true,
+        optionIcon: 'flag',
         width: 'sel',
         span: 6,
         labelAr: 'الجنسية',
@@ -449,6 +453,8 @@ const fields: Record<string, FieldDef> = {
   },
   plaintiff_owner_nationality: {
     name: 'plaintiff_owner_nationality',
+    searchable: true,
+    optionIcon: 'flag',
     width: 'sel',
     span: 6,
     labelAr: 'جنسية صاحب المنشأة',
