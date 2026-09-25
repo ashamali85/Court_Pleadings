@@ -167,19 +167,32 @@ export function partyLine(party: PartyValues): string {
         .join(' – ')
 
     case 'licence': {
-      const establishment = [
-        party.establishment_name.trim(),
-        party.licence_register ? `سجل تجاري رقم (${party.licence_register})` : '',
-        party.licence_civil_no ? `رقم الجهة المدني (${party.licence_civil_no})` : '',
-      ]
-        .filter(Boolean)
-        .join(' – ')
+      /*
+       * «صيدلية راما لصاحبها علي محمود العريان – كويتي الجنسية – بطاقة مدنية
+       *  رقم (…) – سجل تجاري رقم (…) – رقم الجهة المدني (…)»
+       *
+       * The owner follows the establishment immediately, and the licence's own
+       * numbers close the line — so the reader gets the establishment, then
+       * the person answerable for it, then the registrations.
+       *
+       * «لصاحبها» agrees with a feminine establishment (صيدلية، مؤسسة، شركة),
+       * which is what this office's pleadings use.
+       */
       const owner = personLine(
         party.owner_name,
         party.owner_civil_id,
         party.owner_nationality,
       )
-      return owner ? `${establishment}، ويملكها السيد/ ${owner}` : establishment
+      const establishment = party.establishment_name.trim()
+      const head = owner ? `${establishment} لصاحبها ${owner}` : establishment
+
+      return [
+        head,
+        party.licence_register ? `سجل تجاري رقم (${party.licence_register})` : '',
+        party.licence_civil_no ? `رقم الجهة المدني (${party.licence_civil_no})` : '',
+      ]
+        .filter(Boolean)
+        .join(' – ')
     }
 
     default:

@@ -188,8 +188,8 @@ for (const side of [
       [f('licence_register')]: '778899',
       [f('licence_civil_no')]: '100998877',
     }),
-    'مؤسسة النور للتجارة العامة – سجل تجاري رقم (778899) – رقم الجهة المدني (100998877)، ' +
-      'ويملكها السيد/ سالم فهد الدوسري – كويتي الجنسية – بطاقة مدنية رقم (280070500321)',
+    'مؤسسة النور للتجارة العامة لصاحبها سالم فهد الدوسري – كويتي الجنسية – ' +
+      'بطاقة مدنية رقم (280070500321) – سجل تجاري رقم (778899) – رقم الجهة المدني (100998877)',
   )
 
   // شكل الشركة is a closed list, so a stale or hand-posted value is rejected
@@ -228,6 +228,33 @@ for (const side of [
     }),
     `${f('heirs')}.1.name`,
   )
+}
+
+// ---------- the رخصة فردية line, against the office's own pleading ----------
+console.log('\n--- رخصة فردية, verbatim')
+{
+  const both = evictionTemplate.schema.safeParse({
+    ...sample,
+    plaintiff_type: 'licence',
+    plaintiff_establishment_name: 'صيدلية راما',
+    plaintiff_owner_name: 'علي محمود علي عبدالنبي العريان',
+    plaintiff_owner_civil_id: '285022501203',
+    plaintiff_owner_nationality: 'KW',
+    plaintiff_licence_register: '3455',
+    plaintiff_licence_civil_no: '4543',
+  })
+  if (!both.success) {
+    console.log('FAIL  did not validate:', JSON.stringify(both.error.issues))
+    failures++
+  } else {
+    const out = evictionTemplate.derive(both.data, {}) as Record<string, string>
+    check(
+      'matches the line as it appears in the office pleading',
+      out.plaintiff_name,
+      'صيدلية راما لصاحبها علي محمود علي عبدالنبي العريان – كويتي الجنسية – ' +
+        'بطاقة مدنية رقم (285022501203) – سجل تجاري رقم (3455) – رقم الجهة المدني (4543)',
+    )
+  }
 }
 
 // ---------- the repeatable rows arrive as an array, with Arabic digits folded ----------
