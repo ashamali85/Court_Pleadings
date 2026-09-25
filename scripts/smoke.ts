@@ -104,135 +104,194 @@ const trimmed = evictionTemplate.derive(
 check('renumbering: arrears becomes first', trimmed.ordinal_arrears, 'أولاً')
 check('renumbering: costs becomes second', trimmed.ordinal_costs, 'ثانياً')
 
-// ---------- the four plaintiff types ----------
-console.log('\n--- plaintiff')
+// ---------- the four types, for BOTH sides ----------
+//
+// The same battery is run against المدعي and المدعى عليه. If the two ever
+// stop behaving identically, this is what notices.
+for (const side of [
+  { prefix: 'plaintiff', labelAr: 'المدعي' },
+  { prefix: 'defendant', labelAr: 'المدعى عليه' },
+]) {
+  console.log(`\n--- ${side.labelAr} (${side.prefix})`)
+  const f = (key: string) => `${side.prefix}_${key}`
 
-function lineFor(patch: Record<string, unknown>): string {
-  const result = evictionTemplate.schema.safeParse({ ...sample, ...patch })
-  if (!result.success) {
-    console.log('FAIL  did not validate:', JSON.stringify(result.error.issues))
-    failures++
-    return ''
+  /** validate a patched sample and return that side's composed line */
+  function lineFor(patch: Record<string, unknown>): string {
+    const result = evictionTemplate.schema.safeParse({ ...sample, ...patch })
+    if (!result.success) {
+      console.log('FAIL  did not validate:', JSON.stringify(result.error.issues))
+      failures++
+      return ''
+    }
+    const out = evictionTemplate.derive(result.data, {}) as Record<string, string>
+    return out[f('name')]
   }
-  const out = evictionTemplate.derive(result.data, {}) as Record<string, string>
-  return out.plaintiff_name
+
+  /** the first error path a patched sample produces, or '' if it validated */
+  function errorPath(patch: Record<string, unknown>): string {
+    const result = evictionTemplate.schema.safeParse({ ...sample, ...patch })
+    return result.success ? '' : result.error.issues[0].path.join('.')
+  }
+
+  check(
+    'legacy free text survives',
+    lineFor({}),
+    (sample as unknown as Record<string, string>)[f('name')],
+  )
+
+  check(
+    'شخص طبيعي',
+    lineFor({
+      [f('type')]: 'natural',
+      [f('full_name')]: 'خالد يوسف العنزي',
+      [f('civil_id')]: '289010112345',
+      [f('nationality')]: 'KW',
+    }),
+    'خالد يوسف العنزي – كويتي الجنسية – بطاقة مدنية رقم (289010112345)',
+  )
+
+  check(
+    'ورثة',
+    lineFor({
+      [f('type')]: 'heirs',
+      [f('deceased_name')]: 'حبيب محمد تقي بهبهاني',
+      [f('heirs')]: [
+        { name: 'أمير حبيب بهبهاني', civil_id: '271032200626', nationality: 'KW' },
+        { name: 'راج كومار', civil_id: '274051600696', nationality: 'IN' },
+      ],
+    }),
+    'ورثة المرحوم/ حبيب محمد تقي بهبهاني، وهم كل من:\n' +
+      '1- أمير حبيب بهبهاني – كويتي الجنسية – بطاقة مدنية رقم (271032200626)\n' +
+      '2- راج كومار – هندي الجنسية – بطاقة مدنية رقم (274051600696)',
+  )
+
+  check(
+    'شركة',
+    lineFor({
+      [f('type')]: 'company',
+      [f('company_name')]: 'شركة الخليج العقارية',
+      [f('company_form')]: 'llc',
+      [f('company_register')]: '123456',
+      [f('company_civil_no')]: '100234567',
+    }),
+    'شركة الخليج العقارية – ذات مسؤولية محدودة – سجل تجاري رقم (123456) – رقم الجهة المدني (100234567)',
+  )
+
+  check(
+    'رخصة فردية',
+    lineFor({
+      [f('type')]: 'licence',
+      [f('establishment_name')]: 'مؤسسة النور للتجارة العامة',
+      [f('owner_name')]: 'سالم فهد الدوسري',
+      [f('owner_civil_id')]: '280070500321',
+      [f('owner_nationality')]: 'KW',
+      [f('licence_register')]: '778899',
+      [f('licence_civil_no')]: '100998877',
+    }),
+    'مؤسسة النور للتجارة العامة – سجل تجاري رقم (778899) – رقم الجهة المدني (100998877)، ' +
+      'ويملكها السيد/ سالم فهد الدوسري – كويتي الجنسية – بطاقة مدنية رقم (280070500321)',
+  )
+
+  // شكل الشركة is a closed list, so a stale or hand-posted value is rejected
+  check(
+    'company form must be one of the six',
+    errorPath({
+      [f('type')]: 'company',
+      [f('company_name')]: 'شركة الخليج العقارية',
+      [f('company_form')]: 'ذات مسؤولية محدودة',
+      [f('company_register')]: '123456',
+      [f('company_civil_no')]: '100234567',
+    }),
+    f('company_form'),
+  )
+
+  check(
+    'civil ID must be 12 digits',
+    errorPath({
+      [f('type')]: 'natural',
+      [f('full_name')]: 'خالد يوسف العنزي',
+      [f('civil_id')]: '2890101',
+      [f('nationality')]: 'KW',
+    }),
+    f('civil_id'),
+  )
+
+  check(
+    'heir errors carry the row index',
+    errorPath({
+      [f('type')]: 'heirs',
+      [f('deceased_name')]: 'حبيب محمد تقي بهبهاني',
+      [f('heirs')]: [
+        { name: 'أمير حبيب بهبهاني', civil_id: '271032200626', nationality: 'KW' },
+        { name: '', civil_id: '274051600696', nationality: 'IN' },
+      ],
+    }),
+    `${f('heirs')}.1.name`,
+  )
 }
 
-check('legacy free text survives', lineFor({}), sample.plaintiff_name)
+// ---------- the repeatable rows arrive as an array, with Arabic digits folded ----------
+console.log('\n--- rows')
+{
+  const form = new FormData()
+  form.set('plaintiff_type', 'heirs')
+  form.set('plaintiff_deceased_name', 'حبيب محمد تقي بهبهاني')
+  form.set(
+    'plaintiff_heirs',
+    JSON.stringify([
+      { name: 'أمير حبيب بهبهاني', civil_id: '٢٧١٠٣٢٢٠٠٦٢٦', nationality: 'KW' },
+    ]),
+  )
+  const values = formDataToValues(evictionTemplate as never, form) as Record<
+    string,
+    unknown
+  >
+  const heirs = values.plaintiff_heirs as { civil_id: string }[]
+  check('rows arrive as an array', Array.isArray(heirs), true)
+  check('Arabic-Indic digits normalised', heirs[0].civil_id, '271032200626')
+}
 
-check(
-  'شخص طبيعي',
-  lineFor({
-    plaintiff_type: 'natural',
-    plaintiff_full_name: 'خالد يوسف العنزي',
-    plaintiff_civil_id: '289010112345',
-    plaintiff_nationality: 'KW',
-  }),
-  'خالد يوسف العنزي – كويتي الجنسية – بطاقة مدنية رقم (289010112345)',
-)
-
-check(
-  'ورثة',
-  lineFor({
-    plaintiff_type: 'heirs',
-    plaintiff_deceased_name: 'حبيب محمد تقي بهبهاني',
-    plaintiff_heirs: [
-      { name: 'أمير حبيب بهبهاني', civil_id: '271032200626', nationality: 'KW' },
-      { name: 'راج كومار', civil_id: '274051600696', nationality: 'IN' },
-    ],
-  }),
-  'ورثة المرحوم/ حبيب محمد تقي بهبهاني، وهم كل من:\n' +
-    '1- أمير حبيب بهبهاني – كويتي الجنسية – بطاقة مدنية رقم (271032200626)\n' +
-    '2- راج كومار – هندي الجنسية – بطاقة مدنية رقم (274051600696)',
-)
-
-check(
-  'شركة',
-  lineFor({
+// ---------- the two sides are independent ----------
+console.log('\n--- both sides at once')
+{
+  const both = evictionTemplate.schema.safeParse({
+    ...sample,
     plaintiff_type: 'company',
     plaintiff_company_name: 'شركة الخليج العقارية',
     plaintiff_company_form: 'llc',
     plaintiff_company_register: '123456',
     plaintiff_company_civil_no: '100234567',
-  }),
-  'شركة الخليج العقارية – ذات مسؤولية محدودة – سجل تجاري رقم (123456) – رقم الجهة المدني (100234567)',
-)
-
-// شكل الشركة is a closed list, so a stale or hand-posted value is rejected
-const badForm = evictionTemplate.schema.safeParse({
-  ...sample,
-  plaintiff_type: 'company',
-  plaintiff_company_name: 'شركة الخليج العقارية',
-  plaintiff_company_form: 'ذات مسؤولية محدودة',
-  plaintiff_company_register: '123456',
-  plaintiff_company_civil_no: '100234567',
-})
-check(
-  'company form must be one of the six',
-  badForm.success ? 'accepted' : badForm.error.issues[0]?.path.join('.'),
-  'plaintiff_company_form',
-)
-
-check(
-  'رخصة فردية',
-  lineFor({
-    plaintiff_type: 'licence',
-    plaintiff_establishment_name: 'مؤسسة النور للتجارة العامة',
-    plaintiff_owner_name: 'سالم فهد الدوسري',
-    plaintiff_owner_civil_id: '280070500321',
-    plaintiff_owner_nationality: 'KW',
-    plaintiff_licence_register: '778899',
-    plaintiff_licence_civil_no: '100998877',
-  }),
-  'مؤسسة النور للتجارة العامة – سجل تجاري رقم (778899) – رقم الجهة المدني (100998877)،' +
-    ' ويملكها السيد/ سالم فهد الدوسري – كويتي الجنسية – بطاقة مدنية رقم (280070500321)',
-)
-
-// a wrong civil ID is caught on the field that holds it, not the whole form
-const badId = evictionTemplate.schema.safeParse({
-  ...sample,
-  plaintiff_type: 'natural',
-  plaintiff_full_name: 'خالد يوسف العنزي',
-  plaintiff_civil_id: '28901',
-  plaintiff_nationality: 'KW',
-})
-check(
-  'civil ID must be 12 digits',
-  badId.success ? 'accepted' : badId.error.issues[0]?.path.join('.'),
-  'plaintiff_civil_id',
-)
-
-// an empty heir reports against that row, so the input can be marked
-const badHeir = evictionTemplate.schema.safeParse({
-  ...sample,
-  plaintiff_type: 'heirs',
-  plaintiff_deceased_name: 'حبيب محمد تقي بهبهاني',
-  plaintiff_heirs: [
-    { name: 'أمير حبيب بهبهاني', civil_id: '271032200626', nationality: 'KW' },
-    { name: '', civil_id: '274051600696', nationality: 'KW' },
-  ],
-})
-check(
-  'heir errors carry the row index',
-  badHeir.success ? 'accepted' : badHeir.error.issues[0]?.path.join('.'),
-  'plaintiff_heirs.1.name',
-)
-
-// the form posts Arabic-Indic digits and the heirs as JSON
-const posted = new FormData()
-posted.set('plaintiff_type', 'heirs')
-posted.set('plaintiff_deceased_name', 'حبيب بهبهاني')
-posted.set(
-  'plaintiff_heirs',
-  JSON.stringify([{ name: 'أمير', civil_id: '٢٧١٠٣٢٢٠٠٦٢٦', nationality: 'KW' }]),
-)
-const fromForm = formDataToValues(
-  evictionTemplate as unknown as Parameters<typeof formDataToValues>[0],
-  posted,
-)
-const heirRows = fromForm.plaintiff_heirs as { civil_id: string }[]
-check('rows arrive as an array', Array.isArray(heirRows), true)
-check('Arabic-Indic digits normalised', heirRows[0]?.civil_id, '271032200626')
+    defendant_type: 'natural',
+    defendant_full_name: 'طارق موسى عطا عمار',
+    defendant_civil_id: '274082805061',
+    defendant_nationality: 'JO',
+  })
+  if (!both.success) {
+    console.log('FAIL  did not validate:', JSON.stringify(both.error.issues))
+    failures++
+  } else {
+    const out = evictionTemplate.derive(both.data, {}) as Record<string, string>
+    check(
+      'المدعي keeps its own line',
+      out.plaintiff_name,
+      'شركة الخليج العقارية – ذات مسؤولية محدودة – سجل تجاري رقم (123456) – رقم الجهة المدني (100234567)',
+    )
+    check(
+      'المدعى عليه keeps its own line',
+      out.defendant_name,
+      'طارق موسى عطا عمار – أردني الجنسية – بطاقة مدنية رقم (274082805061)',
+    )
+    check(
+      'the lawyer can still override the defendant line',
+      (
+        evictionTemplate.derive(both.data, {
+          defendant_name: 'المستأجر المجهول',
+        }) as Record<string, string>
+      ).defendant_name,
+      'المستأجر المجهول',
+    )
+  }
+}
 
 // ---------- render ----------
 console.log('\n--- render')
