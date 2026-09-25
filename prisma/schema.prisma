@@ -12,6 +12,17 @@ enum Role {
   ADMIN
 }
 
+/// What a client may attach. The order here is the order the form shows.
+enum AttachmentKind {
+  LEASE
+  PLAINTIFF_ID
+  DEFENDANT_ID
+  COMPANY_DEED
+  TRADE_LICENCE
+  HEIRS_INVENTORY
+  OTHER
+}
+
 enum RequestStatus {
   SUBMITTED
   UNDER_REVIEW
@@ -30,8 +41,9 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  requests   CaseRequest[] @relation("ClientRequests")
-  documents  Document[]    @relation("GeneratedBy")
+  requests    CaseRequest[] @relation("ClientRequests")
+  documents   Document[]    @relation("GeneratedBy")
+  attachments Attachment[]  @relation("UploadedAttachments")
   auditLogs  AuditLog[]
   siteTexts  SiteText[]
 }
@@ -68,8 +80,9 @@ model CaseRequest {
   updatedAt   DateTime      @updatedAt
 
   client    User         @relation("ClientRequests", fields: [clientId], references: [id])
-  template  CaseTemplate @relation(fields: [templateKey], references: [key])
-  documents Document[]
+  template    CaseTemplate @relation(fields: [templateKey], references: [key])
+  documents   Document[]
+  attachments Attachment[]
 
   @@index([clientId, createdAt])
   @@index([status, createdAt])
@@ -89,6 +102,37 @@ model Document {
   generatedBy User        @relation("GeneratedBy", fields: [generatedById], references: [id])
 
   @@unique([requestId, version])
+}
+
+/// A file the client attached to a request. The bytes live in a private
+/// Vercel Blob store, never in Postgres — a scan of a lease is far larger than
+/// the generated .docx and would bloat the database and its backups.
+///
+/// `requestId` is null while the client is still filling the form: the upload
+/// happens as soon as a file is chosen, so it is held against `draftKey` until
+/// the request exists and then adopted by it. A row with neither is orphaned
+/// and safe to sweep.
+model Attachment {
+  id           String         @id @default(cuid())
+  requestId    String?
+  /// groups a draft's uploads before the request is created
+  draftKey     String?
+  kind         AttachmentKind
+  filename     String
+  mimeType     String
+  size         Int
+  /// pathname inside the private blob store; not a public URL
+  blobPath     String         @unique
+  uploadedById String
+  createdAt    DateTime       @default(now())
+
+  request    CaseRequest? @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  uploadedBy User         @relation("UploadedAttachments", fields: [uploadedById], references: [id])
+
+  /// one file per kind per request — replacing simply deletes the old row
+  @@unique([requestId, kind])
+  @@index([draftKey])
+  @@index([uploadedById, createdAt])
 }
 
 /// Every user-visible string in the app. A row exists only when the admin has

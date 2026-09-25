@@ -2,6 +2,7 @@ import { submitRequest } from '@/app/requests/actions'
 import RequestForm from '@/app/requests/new/request-form'
 import Topbar from '@/components/topbar'
 import { requireUser } from '@/lib/auth'
+import { env } from '@/lib/env'
 import {
   applyContentToSections,
   getContent,
@@ -20,6 +21,10 @@ export default async function NewRequestPage() {
   const t = translator(content)
   const template = templates[0]
 
+  // a fresh key per visit; the uploads it groups are adopted by the request on
+  // submit. Generated on the server so the first render already carries it.
+  const draftKey = crypto.randomUUID().replace(/-/g, '')
+
   return (
     <>
       <Topbar user={user} content={content} />
@@ -37,6 +42,11 @@ export default async function NewRequestPage() {
             templateKey={template.key}
             sections={applyContentToSections(template, content)}
             defaults={evictionDefaults as unknown as Record<string, unknown>}
+            attachments={
+              env.attachmentsEnabled
+                ? { draftKey, userId: user.id, initial: [] }
+                : undefined
+            }
             labels={{
               noteSection: t('client.new.noteSection'),
               noteLabel: t('client.new.noteLabel'),
@@ -45,6 +55,7 @@ export default async function NewRequestPage() {
               submitHint: t('client.new.submitHint'),
               needsFix: t('message.needsFix'),
               working: t('common.working'),
+              attachSection: t('client.new.attachSection'),
             }}
           />
         </div>

@@ -3,6 +3,7 @@ import { updateRequest } from '@/app/requests/actions'
 import RequestForm from '@/app/requests/new/request-form'
 import Topbar from '@/components/topbar'
 import { requireUser } from '@/lib/auth'
+import { env } from '@/lib/env'
 import {
   applyContentToSections,
   getContent,
@@ -32,6 +33,18 @@ export default async function EditRequestPage({
 
   const content = await getContent()
   const t = translator(content)
+
+  // what the client already sent, so the returned form shows it rather than
+  // looking as though the files were lost; anything added now joins them on
+  // resubmit under a fresh draft key
+  const attached = env.attachmentsEnabled
+    ? await db.attachment.findMany({
+        where: { requestId: request.id },
+        select: { id: true, kind: true, filename: true, size: true },
+        orderBy: { createdAt: 'asc' },
+      })
+    : []
+  const draftKey = crypto.randomUUID().replace(/-/g, '')
 
   return (
     <>
@@ -63,6 +76,11 @@ export default async function EditRequestPage({
             requestId={request.id}
             sections={applyContentToSections(template, content)}
             defaults={request.data as Record<string, unknown>}
+            attachments={
+              env.attachmentsEnabled
+                ? { draftKey, userId: user.id, initial: attached }
+                : undefined
+            }
             clientNote={request.clientNote ?? ''}
             labels={{
               noteSection: t('client.new.noteSection'),
@@ -72,6 +90,7 @@ export default async function EditRequestPage({
               submitHint: t('client.new.submitHint'),
               needsFix: t('message.needsFix'),
               working: t('common.working'),
+              attachSection: t('client.new.attachSection'),
             }}
           />
         </div>

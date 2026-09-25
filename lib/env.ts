@@ -43,6 +43,21 @@ export const env = {
   get APP_URL(): string {
     return process.env.APP_URL ?? 'http://localhost:3000'
   },
+
+  /**
+   * Vercel Blob. On Vercel a connected store authenticates by OIDC and this is
+   * not needed — but issuing a browser upload token with `handleUpload` does
+   * require the read-write token, so the attachment routes ask for it by name
+   * and fail clearly when it is absent.
+   */
+  get BLOB_READ_WRITE_TOKEN(): string {
+    return required('BLOB_READ_WRITE_TOKEN')
+  },
+
+  /** true when attachments can actually be stored; the UI hides them otherwise */
+  get attachmentsEnabled(): boolean {
+    return Boolean(process.env.BLOB_READ_WRITE_TOKEN)
+  },
 }
 
 /** Explicit check for scripts and health endpoints. Throws on the first problem. */

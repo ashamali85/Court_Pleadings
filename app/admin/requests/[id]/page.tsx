@@ -11,6 +11,7 @@ import {
   templateName,
   translator,
 } from '@/lib/content'
+import { attachmentLabel, humanSize } from '@/lib/attachments'
 import db from '@/lib/db'
 import { statusBadge } from '@/lib/status'
 import { getTemplate } from '@/lib/templates'
@@ -32,7 +33,11 @@ export default async function ReviewRequestPage({
 
   const request = await db.caseRequest.findUnique({
     where: { id },
-    include: { client: true, documents: { orderBy: { version: 'desc' } } },
+    include: {
+      client: true,
+      documents: { orderBy: { version: 'desc' } },
+      attachments: { orderBy: { createdAt: 'asc' } },
+    },
   })
   if (!request) notFound()
 
@@ -90,6 +95,43 @@ export default async function ReviewRequestPage({
             <div className="card tinted">
               <div className="section-title">{t('admin.review.clientNoteTitle')}</div>
               <div className="preview">{request.clientNote}</div>
+            </div>
+          ) : null}
+
+          {request.attachments.length > 0 ? (
+            <div className="card">
+              <div className="section-title">{t('admin.review.attachTitle')}</div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>{t('admin.review.colAttachKind')}</th>
+                    <th>{t('admin.review.colFile')}</th>
+                    <th>{t('admin.review.colSize')}</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {request.attachments.map(
+                    (a: {
+                      id: string
+                      kind: string
+                      filename: string
+                      size: number
+                    }) => (
+                      <tr key={a.id}>
+                        <td>{attachmentLabel(a.kind)}</td>
+                        <td dir="ltr">{a.filename}</td>
+                        <td>{humanSize(a.size)}</td>
+                        <td>
+                          <a href={`/api/attachments/${a.id}`}>
+                            {t('common.download')}
+                          </a>
+                        </td>
+                      </tr>
+                    ),
+                  )}
+                </tbody>
+              </table>
             </div>
           ) : null}
 

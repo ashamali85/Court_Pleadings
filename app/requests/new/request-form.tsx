@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react'
 import type { RequestFormState } from '@/app/requests/actions'
+import Attachments, { type AttachedFile } from '@/components/attachments'
 import SectionCard, { Accordion } from '@/components/collapsible'
 import { Field, FieldGrid, useFieldValues } from '@/components/fields'
 import LoadingOverlay from '@/components/loading-overlay'
@@ -19,6 +20,7 @@ export default function RequestForm({
   requestId,
   sections,
   defaults,
+  attachments,
   clientNote,
   labels,
 }: {
@@ -27,6 +29,8 @@ export default function RequestForm({
   requestId?: string
   sections: SectionDef[]
   defaults: Record<string, unknown>
+  /** absent when no blob store is configured, which hides the section entirely */
+  attachments?: { draftKey: string; userId: string; initial: AttachedFile[] }
   clientNote?: string
   labels: {
     noteSection: string
@@ -36,6 +40,7 @@ export default function RequestForm({
     submitHint: string
     needsFix: string
     working: string
+    attachSection: string
   }
 }) {
   const [state, formAction] = useActionState<RequestFormState, FormData>(action, {})
@@ -78,6 +83,16 @@ export default function RequestForm({
             </SectionCard>
           )
         })}
+
+        {attachments ? (
+          <SectionCard id="attachments" title={labels.attachSection}>
+            <Attachments
+              draftKey={attachments.draftKey}
+              userId={attachments.userId}
+              initial={attachments.initial}
+            />
+          </SectionCard>
+        ) : null}
 
         <SectionCard id="client-note" title={labels.noteSection}>
           <FieldGrid>
