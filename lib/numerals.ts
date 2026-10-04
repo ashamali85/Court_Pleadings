@@ -60,6 +60,33 @@ export function parseDate(
   return { day, month, year }
 }
 
+/**
+ * The Gregorian months as Kuwait writes them — مارس، أبريل — not the Levantine
+ * آذار / نيسان. The office's own documents date an instrument this way
+ * («المؤرخ 1 مارس 2026») even though a table cell holds 1/3/2026.
+ */
+const MONTHS_AR = [
+  'يناير',
+  'فبراير',
+  'مارس',
+  'أبريل',
+  'مايو',
+  'يونيو',
+  'يوليو',
+  'أغسطس',
+  'سبتمبر',
+  'أكتوبر',
+  'نوفمبر',
+  'ديسمبر',
+]
+
+/** "1/3/2026" -> "1 مارس 2026"; anything unparseable gives '' */
+export function longDateAr(value: string): string {
+  const parsed = parseDate(value)
+  if (!parsed) return ''
+  return `${parsed.day} ${MONTHS_AR[parsed.month - 1]} ${parsed.year}`
+}
+
 /** Arabic weekday for a d/m/yyyy string — "19/5/2019" -> "الأحد". */
 export function weekdayAr(value: string): string {
   const parsed = parseDate(value)
