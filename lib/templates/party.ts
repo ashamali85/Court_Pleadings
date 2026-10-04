@@ -47,7 +47,17 @@ export type Heir = z.infer<typeof heirSchema>
 
 /** The zod declarations for one side. Spread into the schema under a prefix. */
 export const partyShape = {
-  type: z.enum(PARTY_TYPES).optional(),
+  /*
+   * An unchosen صفة posts an empty string, and a request stored before these
+   * screens existed has no key at all. Both mean the same thing — nobody has
+   * picked yet — so both become undefined and fall to the legacy branch, which
+   * reports in Arabic against the name field. Without this, `''` reaches the
+   * enum and the client gets a raw zod message on a select that looks fine.
+   */
+  type: z.preprocess(
+    (value) => (value === '' || value === null ? undefined : value),
+    z.enum(PARTY_TYPES).optional(),
+  ),
   /** free text from before the party types existed */
   name: z.string().trim().max(4000).default(''),
 
@@ -315,6 +325,24 @@ export function partyFields(prefix: string, labelAr: string): FieldDef[] {
         { value: 'company', labelAr: 'شركة' },
         { value: 'licence', labelAr: 'رخصة فردية' },
       ],
+    },
+
+    /*
+     * Requests stored before the صفة existed carry the whole party as one
+     * typed-out line. It is shown only while no صفة is chosen, which is
+     * exactly when it is the live value — so the client can see what was
+     * submitted, and it survives the round trip instead of being posted empty
+     * by a form that has no input for it. Choosing a صفة unmounts this field,
+     * which clears it: the structured fields are the value from then on.
+     */
+    {
+      name: n('name'),
+      labelAr: `اسم ${labelAr} كما ورد في الطلب السابق`,
+      hintAr: `هذا الطلب أُرسل قبل إضافة «صفة ${labelAr}». اختر الصفة أعلاه لإدخال البيانات في حقول منفصلة، أو صحّح النص هنا كما هو.`,
+      type: 'textarea',
+      rows: 3,
+      required: true,
+      showWhen: { field: n('type'), equals: [''] },
     },
 
     /* --- شخص طبيعي --- */

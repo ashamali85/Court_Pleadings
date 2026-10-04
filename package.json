@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit",
     "smoke": "tsx scripts/smoke.ts",
     "search:check": "tsx scripts/search-check.ts",
-    "attachments:check": "tsx scripts/attachments-check.ts"
+    "attachments:check": "tsx scripts/attachments-check.ts",
+    "form:check": "tsx scripts/form-check.tsx"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",

@@ -10,7 +10,8 @@ import { renderDocx } from '../lib/docgen'
 import { toLatinDigits, weekdayAr } from '../lib/numerals'
 import { amountToArabicWords, numberToArabicWords } from '../lib/tafqeet'
 import { evictionTemplate } from '../lib/templates/eviction'
-import { formDataToValues } from '../lib/templates'
+import { allFields, formDataToValues } from '../lib/templates'
+import { fieldString, isFieldVisible } from '../lib/templates/visibility'
 
 let failures = 0
 
@@ -316,6 +317,79 @@ console.log('\n--- both sides at once')
         }) as Record<string, string>
       ).defendant_name,
       'المستأجر المجهول',
+    )
+  }
+}
+
+// ---------- a request stored before the party types existed ----------
+//
+// The screens used to hold one free-text line per side. Those requests are
+// still in the database, and a client can be asked to correct one. Opening it
+// must show that line, and sending it back must not lose it: the form posts
+// only the inputs it rendered, so a value with no visible field is a value
+// that quietly disappears.
+console.log('\n--- a legacy request, opened and resubmitted')
+{
+  /** what the browser would post: every visible field, and nothing else */
+  function submit(values: Record<string, unknown>): Record<string, unknown> {
+    const form = new FormData()
+    for (const field of allFields(evictionTemplate as never)) {
+      if (!isFieldVisible(field, values)) continue
+      const value = values[field.name]
+      if (field.type === 'boolean') {
+        if (value) form.set(field.name, 'on')
+      } else if (field.type === 'rows') {
+        form.set(field.name, JSON.stringify(value ?? []))
+      } else {
+        form.set(field.name, fieldString(value))
+      }
+    }
+    return formDataToValues(evictionTemplate as never, form)
+  }
+
+  const legacy = parsed.data as unknown as Record<string, unknown>
+
+  for (const side of ['plaintiff', 'defendant']) {
+    const stored = legacy[`${side}_name`]
+    check(
+      `${side}: the stored line is on a field the client can see`,
+      isFieldVisible(
+        allFields(evictionTemplate as never).find((f) => f.name === `${side}_name`)!,
+        legacy,
+      ),
+      true,
+    )
+    check(
+      `${side}: and survives the round trip`,
+      submit(legacy)[`${side}_name`],
+      stored,
+    )
+  }
+
+  const again = evictionTemplate.schema.safeParse(submit(legacy))
+  check(
+    'the resubmitted request still validates',
+    again.success ? '' : again.error.issues.map((i) => i.path.join('.')).join(', '),
+    '',
+  )
+
+  // and once a صفة is chosen, the structured fields take over
+  const chosen = submit({
+    ...legacy,
+    plaintiff_type: 'natural',
+    plaintiff_full_name: 'خالد يوسف العنزي',
+    plaintiff_civil_id: '289010112345',
+    plaintiff_nationality: 'KW',
+  })
+  check('choosing a صفة drops the legacy line', chosen.plaintiff_name, '')
+  const structured = evictionTemplate.schema.safeParse(chosen)
+  check('and the structured request validates', structured.success, true)
+  if (structured.success) {
+    check(
+      'with the line built from the fields',
+      (evictionTemplate.derive(structured.data, {}) as Record<string, string>)
+        .plaintiff_name,
+      'خالد يوسف العنزي – كويتي الجنسية – بطاقة مدنية رقم (289010112345)',
     )
   }
 }

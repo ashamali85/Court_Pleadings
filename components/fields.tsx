@@ -6,14 +6,9 @@ import Combobox, { type ComboOption } from '@/components/combobox'
 import DateField from '@/components/date-field'
 import { flagPosition } from '@/lib/nationalities'
 import type { FieldDef } from '@/lib/templates/types'
+import { fieldString as str, isFieldVisible } from '@/lib/templates/visibility'
 
 type Values = Record<string, unknown>
-
-function str(v: unknown): string {
-  if (v === null || v === undefined) return ''
-  if (typeof v === 'boolean') return v ? 'true' : ''
-  return String(v)
-}
 
 /**
  * The 12-column form column. Each Field places itself with `--span`, so a
@@ -95,14 +90,6 @@ export function HintButton({ text, forLabel }: { text: string; forLabel: string 
   )
 }
 
-/** A field with `showWhen` exists only while another field holds one of the
-    listed values. Hidden means unmounted, so it submits nothing at all and the
-    schema decides what an absent value means. */
-export function isVisible(field: FieldDef, values: Values): boolean {
-  if (!field.showWhen) return true
-  return field.showWhen.equals.includes(str(values[field.showWhen.field]))
-}
-
 export function Field({
   field,
   values,
@@ -118,7 +105,7 @@ export function Field({
 }) {
   const error = errors[field.name]
 
-  if (!isVisible(field, values)) return null
+  if (!isFieldVisible(field, values)) return null
 
   if (field.type === 'rows') {
     return (
@@ -221,6 +208,15 @@ export function Field({
           onChange={(e) => onChange(field.name, e.target.value)}
           disabled={isDisabled}
         >
+          {/*
+           * A <select> whose value matches no option falls back to showing the
+           * first one, so an unchosen field reads as if it were already
+           * answered. Give it somewhere honest to sit; it disappears once a
+           * real option is picked, so it cannot be chosen back.
+           */}
+          {field.options?.some((o) => o.value === value) ? null : (
+            <option value="">{field.placeholder ?? '— اختر —'}</option>
+          )}
           {field.options?.map((o) => (
             <option key={o.value} value={o.value}>
               {o.labelAr}

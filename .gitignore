@@ -10,3 +10,6 @@ next-env.d.ts
 
 # files the desktop app drops here when it saves chat attachments
 Claude outputs/
+
+# written by the smoke run
+sample-output.docx
