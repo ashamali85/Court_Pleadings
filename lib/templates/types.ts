@@ -47,8 +47,13 @@ export type FieldDef = {
   mirrorOf?: string
   /** show this field only when the named boolean field is false */
   hiddenWhen?: string
-  /** show this field only while another field holds one of these values */
+  /** show this field only while another field holds one of these values.
+      Inside a `rows` group the named field is the one in the same row. */
   showWhen?: { field: string; equals: string[] }
+  /** an office fact the client cannot know — hidden on the request form,
+      shown on the lawyer's review screen. See the financial claim's court
+      name and payment-order number. */
+  adminOnly?: boolean
   /** store Latin digits even when the client types ٤٥٠ */
   latinDigits?: boolean
   placeholder?: string
@@ -80,6 +85,10 @@ export type TemplateDef<TValues> = {
   descriptionAr: string
   filenamePrefix: string
   sections: SectionDef[]
+  /** what a blank form starts with */
+  defaults: Record<string, unknown>
+  /** does this case type offer the client the attachment section? */
+  acceptsAttachments: boolean
   schema: ZodType<TValues>
   /** placeholder values, with any lawyer overrides applied last */
   derive: (values: TValues, overrides?: Record<string, string>) => Placeholders

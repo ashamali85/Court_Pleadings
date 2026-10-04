@@ -50,6 +50,20 @@ export default function RequestForm({
   })
   const errors = state.errors ?? {}
 
+  /*
+   * Some answers are the office's, not the client's — the court a payment
+   * order was filed at, the number it was refused under. The client cannot
+   * know them, so the fields exist on the template but only the lawyer's
+   * review screen renders them, and a section left with nothing in it is
+   * dropped rather than shown empty.
+   */
+  const clientSections = sections
+    .map((section) => ({
+      ...section,
+      fields: section.fields.filter((field) => !field.adminOnly),
+    }))
+    .filter((section) => section.fields.length > 0)
+
   return (
     <form action={formAction}>
       <Accordion>
@@ -59,7 +73,7 @@ export default function RequestForm({
 
         {state.error ? <div className="alert error">{state.error}</div> : null}
 
-        {sections.map((section) => {
+        {clientSections.map((section) => {
           const hasError = section.fields.some((f) => Boolean(errors[f.name]))
           return (
             <SectionCard

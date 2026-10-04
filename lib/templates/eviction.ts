@@ -406,6 +406,8 @@ export const evictionTemplate: TemplateDef<EvictionValues> = {
   descriptionAr:
     'دعوى إخلاء للعين المؤجرة لعدم سداد الأجرة، مع المطالبة بالمتأخر وما يستجد حتى تمام الإخلاء.',
   filenamePrefix: 'sahifat-da3wa-ikhla',
+  acceptsAttachments: true,
+  defaults: evictionDefaults as unknown as Record<string, unknown>,
   schema: evictionSchema,
   derive,
   overridable: [

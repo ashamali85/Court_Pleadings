@@ -333,60 +333,117 @@ function RowsField({
             </div>
 
             <div className="form-grid">
-              {(field.rowFields ?? []).map((sub) => {
-                const id = `${field.name}-${index}-${sub.name}`
-                const subError = errors[`${field.name}.${index}.${sub.name}`]
-                return (
-                  <div className="field" key={sub.name} style={spanStyle(sub)}>
-                    <div className="label-row">
-                      <label htmlFor={id}>
-                        {sub.labelAr}
-                        {sub.required ? <span className="req">*</span> : null}
-                      </label>
+              {(field.rowFields ?? [])
+                /* a row field's showWhen names another field in the same row:
+                   a cheque asks for its bank, an invoice for its stamp */
+                .filter((sub) => isFieldVisible(sub, row))
+                .map((sub) => {
+                  const id = `${field.name}-${index}-${sub.name}`
+                  const subError = errors[`${field.name}.${index}.${sub.name}`]
+
+                  if (sub.type === 'boolean') {
+                    return (
+                      <div className="field" key={sub.name} style={spanStyle(sub)}>
+                        <div className="checkbox">
+                          <input
+                            id={id}
+                            type="checkbox"
+                            checked={row[sub.name] === 'true'}
+                            onChange={(e) =>
+                              setRow(index, sub.name, e.target.checked ? 'true' : '')
+                            }
+                            disabled={disabled}
+                          />
+                          <div className="label-row">
+                            <label htmlFor={id}>{sub.labelAr}</label>
+                            {sub.hintAr ? (
+                              <HintButton text={sub.hintAr} forLabel={sub.labelAr} />
+                            ) : null}
+                          </div>
+                        </div>
+                        {subError ? (
+                          <div className="field-error">{subError}</div>
+                        ) : null}
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div className="field" key={sub.name} style={spanStyle(sub)}>
+                      <div className="label-row">
+                        <label htmlFor={id}>
+                          {sub.labelAr}
+                          {sub.required ? <span className="req">*</span> : null}
+                        </label>
+                        {sub.hintAr ? (
+                          <HintButton text={sub.hintAr} forLabel={sub.labelAr} />
+                        ) : null}
+                      </div>
+                      {sub.type === 'date' ? (
+                        <DateField
+                          id={id}
+                          /* the row travels as JSON in one hidden input, so this
+                           name is only here to keep DateField happy */
+                          name={id}
+                          className={widthClass(sub)}
+                          value={row[sub.name] ?? ''}
+                          onChange={(next) => setRow(index, sub.name, next)}
+                          disabled={disabled}
+                          placeholder={sub.placeholder}
+                        />
+                      ) : sub.type === 'textarea' ? (
+                        <textarea
+                          id={id}
+                          className={controlClass(sub)}
+                          rows={sub.rows ?? 2}
+                          value={row[sub.name] ?? ''}
+                          placeholder={sub.placeholder}
+                          onChange={(e) => setRow(index, sub.name, e.target.value)}
+                          disabled={disabled}
+                        />
+                      ) : sub.type === 'select' && sub.searchable ? (
+                        <Combobox
+                          id={id}
+                          className={widthClass(sub)}
+                          value={row[sub.name] ?? ''}
+                          options={sub.options ?? []}
+                          icon={optionIconFor(sub)}
+                          onChange={(next) => setRow(index, sub.name, next)}
+                          disabled={disabled}
+                          placeholder={sub.placeholder}
+                          invalid={Boolean(subError)}
+                        />
+                      ) : sub.type === 'select' ? (
+                        <select
+                          id={id}
+                          className={widthClass(sub)}
+                          value={row[sub.name] ?? ''}
+                          onChange={(e) => setRow(index, sub.name, e.target.value)}
+                          disabled={disabled}
+                        >
+                          <option value="">—</option>
+                          {sub.options?.map((o) => (
+                            <option key={o.value} value={o.value}>
+                              {o.labelAr}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          id={id}
+                          type="text"
+                          className={controlClass(sub)}
+                          inputMode={sub.latinDigits ? 'numeric' : undefined}
+                          value={row[sub.name] ?? ''}
+                          placeholder={sub.placeholder}
+                          onChange={(e) => setRow(index, sub.name, e.target.value)}
+                          disabled={disabled}
+                        />
+                      )}
+                      {subError ? <div className="field-error">{subError}</div> : null}
                     </div>
-                    {sub.type === 'select' && sub.searchable ? (
-                      <Combobox
-                        id={id}
-                        className={widthClass(sub)}
-                        value={row[sub.name] ?? ''}
-                        options={sub.options ?? []}
-                        icon={optionIconFor(sub)}
-                        onChange={(next) => setRow(index, sub.name, next)}
-                        disabled={disabled}
-                        placeholder={sub.placeholder}
-                        invalid={Boolean(subError)}
-                      />
-                    ) : sub.type === 'select' ? (
-                      <select
-                        id={id}
-                        className={widthClass(sub)}
-                        value={row[sub.name] ?? ''}
-                        onChange={(e) => setRow(index, sub.name, e.target.value)}
-                        disabled={disabled}
-                      >
-                        <option value="">—</option>
-                        {sub.options?.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.labelAr}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        id={id}
-                        type="text"
-                        className={controlClass(sub)}
-                        inputMode={sub.latinDigits ? 'numeric' : undefined}
-                        value={row[sub.name] ?? ''}
-                        placeholder={sub.placeholder}
-                        onChange={(e) => setRow(index, sub.name, e.target.value)}
-                        disabled={disabled}
-                      />
-                    )}
-                    {subError ? <div className="field-error">{subError}</div> : null}
-                  </div>
-                )
-              })}
+                  )
+                })}
             </div>
           </div>
         ))}

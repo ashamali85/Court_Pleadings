@@ -37,7 +37,8 @@ export default async function EditRequestPage({
   // what the client already sent, so the returned form shows it rather than
   // looking as though the files were lost; anything added now joins them on
   // resubmit under a fresh draft key
-  const attached = env.attachmentsEnabled
+  const attachable = env.attachmentsEnabled && template.acceptsAttachments
+  const attached = attachable
     ? await db.attachment.findMany({
         where: { requestId: request.id },
         select: { id: true, kind: true, filename: true, size: true },
@@ -77,9 +78,7 @@ export default async function EditRequestPage({
             sections={applyContentToSections(template, content)}
             defaults={request.data as Record<string, unknown>}
             attachments={
-              env.attachmentsEnabled
-                ? { draftKey, userId: user.id, initial: attached }
-                : undefined
+              attachable ? { draftKey, userId: user.id, initial: attached } : undefined
             }
             clientNote={request.clientNote ?? ''}
             labels={{

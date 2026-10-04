@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import bcrypt from 'bcryptjs'
 import { PrismaPg } from '@prisma/adapter-pg'
@@ -16,10 +16,34 @@ const db = new PrismaClient({ adapter })
 // without redeploying; the file in templates/ is the source of truth at seed time.
 async function seedTemplates() {
   for (const template of templates) {
+    /*
+     * A case type can exist before its Word file does: the questions, the
+     * rules and the wording are useful on their own, and the client can
+     * already submit. The row is created with no bytes, and the review screen
+     * says the template is missing rather than the deploy failing here.
+     */
+    const path = join(process.cwd(), 'templates', `${template.key}.docx`)
+    if (!existsSync(path)) {
+      await db.caseTemplate.upsert({
+        where: { key: template.key },
+        create: {
+          key: template.key,
+          nameAr: template.nameAr,
+          descriptionAr: template.descriptionAr,
+          docx: new Uint8Array(0),
+          version: 1,
+        },
+        update: { nameAr: template.nameAr, descriptionAr: template.descriptionAr },
+      })
+      console.warn(
+        `[seed] template ${template.key} has no .docx yet — requests can be ` +
+          'submitted, but no document can be generated',
+      )
+      continue
+    }
+
     // fresh ArrayBuffer, so it matches Prisma's Uint8Array<ArrayBuffer> Bytes type
-    const docx = new Uint8Array(
-      readFileSync(join(process.cwd(), 'templates', `${template.key}.docx`)),
-    )
+    const docx = new Uint8Array(readFileSync(path))
     const existing = await db.caseTemplate.findUnique({ where: { key: template.key } })
 
     if (!existing) {

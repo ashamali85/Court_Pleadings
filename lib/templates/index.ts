@@ -1,4 +1,5 @@
 import { toLatinDigits } from '@/lib/numerals'
+import { claimTemplate } from '@/lib/templates/claim'
 import { evictionTemplate } from '@/lib/templates/eviction'
 import type { FieldDef, TemplateDef } from '@/lib/templates/types'
 
@@ -6,6 +7,7 @@ import type { FieldDef, TemplateDef } from '@/lib/templates/types'
 // register it here, and seed it. No other file changes.
 export const templates: TemplateDef<never>[] = [
   evictionTemplate as unknown as TemplateDef<never>,
+  claimTemplate as unknown as TemplateDef<never>,
 ]
 
 export function getTemplate(key: string): TemplateDef<never> | undefined {

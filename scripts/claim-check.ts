@@ -40,6 +40,9 @@ import {
   type Instrument,
 } from '@/lib/claim/instruments'
 import { amountInWords, formatMoney, moneyPhrase } from '@/lib/claim/money'
+import { allFields, formDataToValues, templates } from '@/lib/templates'
+import { claimDefaults, claimTemplate } from '@/lib/templates/claim'
+import { fieldString, isFieldVisible } from '@/lib/templates/visibility'
 import { longDateAr } from '@/lib/numerals'
 
 let failures = 0
@@ -549,6 +552,245 @@ check(
 check('وقد تم إنذارها', feminine.body[1].includes('وقد تم إنذارها'), true)
 check('بأن تؤدي', feminine.requests[1].includes('بأن تؤدي للطالبة'), true)
 check('مع إلزامها', feminine.requests[1].includes('مع إلزامها بالفوائد'), true)
+
+// ---------- the form ----------
+//
+// The composer is only reachable through a form, so the form is checked the
+// same way: build what the browser would post, and see what comes back.
+console.log('\n--- the request form')
+{
+  /** what the browser posts: every visible field the client is shown */
+  function submit(values: Record<string, unknown>): Record<string, unknown> {
+    const form = new FormData()
+    for (const field of allFields(claimTemplate as never)) {
+      if (field.adminOnly) continue // the client's form never renders these
+      if (!isFieldVisible(field, values)) continue
+      const value = values[field.name]
+      if (field.type === 'boolean') {
+        if (value) form.set(field.name, 'on')
+      } else if (field.type === 'rows') {
+        form.set(field.name, JSON.stringify(value ?? []))
+      } else {
+        form.set(field.name, fieldString(value))
+      }
+    }
+    return formDataToValues(claimTemplate as never, form)
+  }
+
+  check(
+    'the claim is registered as a second case type',
+    templates.map((t) => t.key).join(','),
+    'eviction-petition,financial-claim',
+  )
+
+  const officeFields = allFields(claimTemplate as never).filter((f) => f.adminOnly)
+  check('seven answers belong to the office', officeFields.length, 7)
+  check(
+    'and the court is one of them',
+    officeFields.some((f) => f.name === 'court_name'),
+    true,
+  )
+
+  const filled = {
+    ...claimDefaults,
+    claimant_name: 'شركة المثال التجارية شركة الشخص الواحد',
+    claimant_entity_civil_no: '0000000',
+    claimant_commercial_register: '000000',
+    respondent_name: 'فلان عبد الله الفلاني',
+    respondent_civil_id: '000000000000',
+    respondent_address: 'منطقة المثال – قطعة (1) – شارع (10)',
+    amount: 7250,
+    instruments: [
+      {
+        kind: 'cheque',
+        number: '000123',
+        date: '1/3/2026',
+        bank: 'بنك المثال',
+        returned: 'true',
+        stamped: '',
+        text: '',
+        amount: 7250,
+      },
+    ],
+  } as unknown as Record<string, unknown>
+
+  const posted = submit(filled)
+  const parsed = claimTemplate.schema.safeParse(posted)
+  check(
+    'a filled claim validates',
+    parsed.success ? '' : parsed.error.issues.map((i) => i.path.join('.')).join(', '),
+    '',
+  )
+
+  if (parsed.success) {
+    const out = claimTemplate.derive(parsed.data, {}) as Record<
+      string,
+      string | boolean
+    >
+    check(
+      'a cheque produces all four documents',
+      out.documents,
+      'صحيفة دعوى، تكليف بالوفاء، طلب استصدار أمر أداء، حافظة مستندات',
+    )
+    check('the demand is offered', out.include_demand, true)
+    check('Article 166 is dropped', out.lawsuit_article_166, false)
+    check(
+      'the body survives the round trip intact',
+      String(out.lawsuit_body).startsWith('ترتبط الطالبة بالمعلن إليه بعلاقة تجارية'),
+      true,
+    )
+    check(
+      'the cheque kept its bank through the JSON row',
+      String(out.lawsuit_body).includes('المسحوب على بنك المثال'),
+      true,
+    )
+    check(
+      'and its bounce, which is a checkbox inside a row',
+      String(out.lawsuit_body).includes('وقد رُدّ الشيك من البنك'),
+      true,
+    )
+    check('the court level follows the amount', out.court_level, 'الكلية')
+  }
+
+  // an invoice instead: two documents, and the Article 166 paragraph stays
+  const invoicePosted = submit({
+    ...filled,
+    amount: 882.511,
+    instruments: [
+      {
+        kind: 'invoice',
+        number: '12345',
+        date: '30/8/2025',
+        bank: '',
+        returned: '',
+        stamped: 'true',
+        text: '',
+        amount: 0,
+      },
+    ],
+  })
+  const invoiceParsed = claimTemplate.schema.safeParse(invoicePosted)
+  check('an invoice claim validates too', invoiceParsed.success, true)
+  if (invoiceParsed.success) {
+    const out = claimTemplate.derive(invoiceParsed.data, {}) as Record<string, unknown>
+    check('two documents only', out.documents, 'صحيفة دعوى، حافظة مستندات')
+    check('no payment order', out.include_order, false)
+    check('Article 166 stays', out.lawsuit_article_166, true)
+    check('the court drops a level', out.court_level, 'الجزئية')
+  }
+
+  /** where a bad answer lands */
+  function errorPath(patch: Record<string, unknown>): string {
+    const result = claimTemplate.schema.safeParse(submit({ ...filled, ...patch }))
+    return result.success ? '' : result.error.issues[0].path.join('.')
+  }
+
+  check(
+    'a company needs its commercial register',
+    errorPath({ claimant_commercial_register: '' }),
+    'claimant_commercial_register',
+  )
+  check(
+    'a person needs twelve digits',
+    errorPath({ respondent_civil_id: '123' }),
+    'respondent_civil_id',
+  )
+  check(
+    'the address is required',
+    errorPath({ respondent_address: '' }),
+    'respondent_address',
+  )
+  check(
+    'a claim needs at least one instrument',
+    errorPath({ instruments: [] }),
+    'instruments',
+  )
+  check(
+    'a bad instrument date lands on that row',
+    errorPath({
+      instruments: [
+        {
+          kind: 'cheque',
+          number: '1',
+          date: 'أمس',
+          bank: 'بنك',
+          returned: '',
+          stamped: '',
+          text: '',
+          amount: 0,
+        },
+      ],
+    }),
+    'instruments.0.date',
+  )
+  check(
+    'and a row with no kind asks for one',
+    errorPath({
+      instruments: [
+        {
+          kind: '',
+          number: '',
+          date: '',
+          bank: '',
+          returned: '',
+          stamped: '',
+          text: '',
+          amount: 0,
+        },
+      ],
+    }),
+    'instruments.0.kind',
+  )
+  check(
+    'أخرى wants the client’s own words',
+    errorPath({
+      instruments: [
+        {
+          kind: 'other',
+          number: '',
+          date: '',
+          bank: '',
+          returned: '',
+          stamped: '',
+          text: '',
+          amount: 0,
+        },
+      ],
+    }),
+    'instruments.0.text',
+  )
+
+  // the office's own answers reach the documents from the review screen
+  const withOffice = claimTemplate.schema.safeParse({
+    ...posted,
+    court_name: 'الرقعي',
+    demand_posted_on: '5/4/2026',
+    order_number: '1234',
+    order_year: '2026',
+    order_refused_on: '20/4/2026',
+  })
+  check('the office answers validate', withOffice.success, true)
+  if (withOffice.success) {
+    const out = claimTemplate.derive(withOffice.data, {}) as Record<string, string>
+    check(
+      'and reach the صحيفة',
+      out.lawsuit_body.includes('أمر الأداء رقم (1234/2026 أمر أداء كلي الرقعي)'),
+      true,
+    )
+    check(
+      'and the أمر أداء names the court',
+      out.order_judge.includes('محكمة الرقعي الكلية'),
+      true,
+    )
+  }
+
+  // the lawyer can still overrule any composed paragraph
+  const overridden = claimTemplate.derive(
+    (parsed.success ? parsed.data : claimDefaults) as never,
+    { lawsuit_requests: 'الطلبات كما كتبها المحامي' },
+  ) as Record<string, string>
+  check('an override wins', overridden.lawsuit_requests, 'الطلبات كما كتبها المحامي')
+}
 
 console.log(failures ? `\n${failures} FAILED` : '\nAll checks passed.')
 process.exit(failures ? 1 : 0)

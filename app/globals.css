@@ -1729,3 +1729,54 @@ input[type='number'] {
     display: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Choosing a case type
+   Two or three cards, each the whole click target. The name carries the
+   weight and the description sits under it in the muted colour, so the eye
+   picks the case before it reads the explanation.
+--------------------------------------------------------------------------- */
+.choice-list {
+  display: grid;
+  gap: var(--space-4);
+  max-width: var(--form-max);
+}
+
+.choice-card {
+  display: block;
+  padding: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.choice-card:hover {
+  border-color: var(--brand);
+  box-shadow: var(--shadow-2);
+}
+
+.choice-name {
+  display: block;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--ink);
+  margin-bottom: var(--space-2);
+}
+
+.choice-desc {
+  display: block;
+  color: var(--ink-soft);
+  line-height: 1.7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .choice-card {
+    transition: none;
+  }
+}
