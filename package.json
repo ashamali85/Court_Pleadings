@@ -16,6 +16,7 @@
     "attachments:check": "tsx scripts/attachments-check.ts",
     "form:check": "tsx scripts/form-check.tsx",
     "claim:check": "tsx scripts/claim-check.ts",
+    "contract:check": "tsx scripts/contract-check.ts",
     "content:check": "tsx scripts/content-check.ts"
   },
   "dependencies": {
@@ -23,6 +24,7 @@
     "@prisma/client": "7.10.0",
     "@vercel/blob": "2.8.0",
     "bcryptjs": "3.0.3",
+    "docx": "^9.8.1",
     "docxtemplater": "3.69.3",
     "dotenv": "17.2.3",
     "jose": "6.2.10",

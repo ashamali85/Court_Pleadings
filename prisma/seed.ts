@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import bcrypt from 'bcryptjs'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from '../lib/generated/prisma/client'
+import { internalForms } from '../lib/contracts'
 import { templates } from '../lib/templates'
 
 // Prisma 7: the seed builds its own client and loads .env itself.
@@ -76,6 +77,58 @@ async function seedTemplates() {
   }
 }
 
+/**
+ * Every built-in internal form is reachable from الأعمال الداخلية.
+ *
+ * The list of jobs belongs to the lawyer — they add, rename, reorder and hide
+ * them — so this only ever adds what is missing:
+ *
+ *   already linked → left completely alone, whatever it has been renamed to;
+ *   a job of the same name the lawyer typed → linked, rather than a second row
+ *     appearing beside theirs;
+ *   neither → one new row at the end of the list.
+ *
+ * Nothing here renames, hides, unlinks or deletes a job, so running it again
+ * after the office has reorganised the list changes nothing.
+ */
+async function seedInternalJobs() {
+  for (const form of internalForms) {
+    const linked = await db.internalJob.findFirst({
+      where: { feature: form.key },
+      select: { id: true },
+    })
+    if (linked) continue
+
+    const byName = await db.internalJob.findFirst({
+      where: { titleAr: form.nameAr, feature: null },
+      orderBy: { position: 'asc' },
+      select: { id: true },
+    })
+    if (byName) {
+      await db.internalJob.update({
+        where: { id: byName.id },
+        data: { feature: form.key },
+      })
+      console.log(`[seed] linked internal job «${form.nameAr}» to ${form.key}`)
+      continue
+    }
+
+    const last = await db.internalJob.findFirst({
+      orderBy: { position: 'desc' },
+      select: { position: true },
+    })
+    await db.internalJob.create({
+      data: {
+        titleAr: form.nameAr,
+        descriptionAr: form.descriptionAr,
+        feature: form.key,
+        position: (last?.position ?? 0) + 1,
+      },
+    })
+    console.log(`[seed] created internal job «${form.nameAr}» (${form.key})`)
+  }
+}
+
 async function seedUsers() {
   const email = process.env.SEED_ADMIN_EMAIL
   const password = process.env.SEED_ADMIN_PASSWORD
@@ -120,6 +173,7 @@ async function seedUsers() {
 
 async function main() {
   await seedTemplates()
+  await seedInternalJobs()
   await seedUsers()
 }
 

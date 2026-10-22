@@ -11,11 +11,17 @@ import {
 import SubmitButton from '@/components/submit-button'
 import type { InternalJob } from '@/lib/internal/jobs'
 
+/** one of the built-in forms a job can open, as the select shows it */
+export type FeatureOption = { value: string; labelAr: string }
+
 export type JobsLabels = {
   addTitle: string
   addHint: string
   name: string
   description: string
+  feature: string
+  featureHint: string
+  featureNone: string
   add: string
   save: string
   visible: string
@@ -31,11 +37,50 @@ export type JobsLabels = {
   openJob: string
 }
 
+/**
+ * The «ما يفتحه هذا العمل» select.
+ *
+ * A job is a row the lawyer types, and most jobs are still just a name; this is
+ * what turns one of them into the contract form. Kept in one component so the
+ * add form and every row ask it the same way.
+ */
+function FeatureSelect({
+  id,
+  features,
+  labels,
+  value,
+}: {
+  id: string
+  features: FeatureOption[]
+  labels: JobsLabels
+  value?: string | null
+}) {
+  if (features.length === 0) return null
+  return (
+    <div className="field">
+      <div className="label-row">
+        <label htmlFor={id}>{labels.feature}</label>
+      </div>
+      <select id={id} name="feature" className="w-org" defaultValue={value ?? ''}>
+        <option value="">{labels.featureNone}</option>
+        {features.map((feature) => (
+          <option key={feature.value} value={feature.value}>
+            {feature.labelAr}
+          </option>
+        ))}
+      </select>
+      <div className="hint">{labels.featureHint}</div>
+    </div>
+  )
+}
+
 export default function JobsManager({
   jobs,
+  features,
   labels,
 }: {
   jobs: InternalJob[]
+  features: FeatureOption[]
   labels: JobsLabels
 }) {
   const [addState, addAction] = useActionState<JobsState, FormData>(createJob, {})
@@ -65,6 +110,7 @@ export default function JobsManager({
               </div>
               <textarea id="new-description" name="descriptionAr" rows={2} />
             </div>
+            <FeatureSelect id="new-feature" features={features} labels={labels} />
           </div>
           <div className="actions">
             <SubmitButton loadingLabel={labels.loading}>{labels.add}</SubmitButton>
@@ -81,6 +127,7 @@ export default function JobsManager({
           <JobRow
             key={job.id}
             job={job}
+            features={features}
             labels={labels}
             isFirst={index === 0}
             isLast={index === jobs.length - 1}
@@ -93,11 +140,13 @@ export default function JobsManager({
 
 function JobRow({
   job,
+  features,
   labels,
   isFirst,
   isLast,
 }: {
   job: InternalJob
+  features: FeatureOption[]
   labels: JobsLabels
   isFirst: boolean
   isLast: boolean
@@ -180,6 +229,13 @@ function JobRow({
               defaultValue={job.descriptionAr ?? ''}
             />
           </div>
+
+          <FeatureSelect
+            id={`${job.id}-feature`}
+            features={features}
+            labels={labels}
+            value={job.feature}
+          />
 
           <div className="field">
             <div className="checkbox">

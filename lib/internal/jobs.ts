@@ -9,12 +9,15 @@
  * A job named but not yet built says so on its own page — see `isPlanned`.
  */
 import 'server-only'
+import { getInternalForm } from '@/lib/contracts'
 import db from '@/lib/db'
 
 export type InternalJob = {
   id: string
   titleAr: string
   descriptionAr: string | null
+  /** key of the built-in form this job opens, or null while it is a stub */
+  feature: string | null
   position: number
   active: boolean
 }
@@ -23,6 +26,7 @@ const SELECT = {
   id: true,
   titleAr: true,
   descriptionAr: true,
+  feature: true,
   position: true,
   active: true,
 } as const
@@ -49,12 +53,14 @@ export async function getJob(id: string): Promise<InternalJob | null> {
 }
 
 /**
- * A job with nothing built behind it yet. Today that is every job — the pages
- * are scaffolding until the office says what each one does — and this is the
- * single place that decides how such a page reads.
+ * A job with nothing built behind it yet: its page says «قيد الإعداد».
+ *
+ * A job is no longer a stub once it is linked to one of the built-in forms in
+ * lib/contracts — that link is what its page renders. A job the lawyer added
+ * themselves and left unlinked is still a named intention, and says so.
  */
-export function isPlanned(_job: InternalJob): boolean {
-  return true
+export function isPlanned(job: InternalJob): boolean {
+  return !getInternalForm(job.feature)
 }
 
 export const JOB_TITLE_MAX = 120

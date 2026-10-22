@@ -19,7 +19,7 @@
  * Source: docs/business-rules/{template,takleef,amr,hafeza}-notes.md, written
  * by the office and approved 2026-10-02.
  */
-import { nationalityLabel, STATELESS } from '@/lib/nationalities'
+import { nationalityAdjective, STATELESS } from '@/lib/nationalities'
 
 /** The grammatical form a party takes in the text. A company is feminine. */
 export const PARTY_FORMS = ['m', 'f', 'pl'] as const
@@ -249,29 +249,20 @@ export function aforementioned(form: PartyForm): string {
 }
 
 /**
- * The nationality as it is written beside a name: «كويتي الجنسية» for a man,
- * «كويتية الجنسية» for a woman. The stored labels are the masculine adjective,
- * and the feminine of an Arabic nisba is the masculine plus ة — which holds for
- * every label in the list that is an adjective at all.
+ * The nationality as it is written beside a name in a pleading: «كويتي
+ * الجنسية» for a man, «كويتية الجنسية» for a woman.
  *
- * Five entries are country names rather than adjectives (جزر سليمان، سانت
- * كيتس ونيفيس …). They are returned unchanged, because adding ة to a country
- * name would be worse than leaving it; they are worth fixing in the data.
+ * The agreement itself — and the five labels that are country names rather
+ * than adjectives — is `nationalityAdjective` in lib/nationalities, which owns
+ * the labels and is shared with the office's fee contract. What is particular
+ * to a pleading is the word after it: «بدون جنسية» for a stateless party, and
+ * «… الجنسية» for everyone else.
  */
 export function nationalityPhrase(code: string, form: PartyForm): string {
   if (!code) return ''
   if (code === STATELESS) return 'بدون جنسية'
 
-  const label = nationalityLabel(code)
-  if (!label) return ''
-
-  const feminine = form === 'f'
-  // «كونغولي (جمهورية الكونغو الديمقراطية)» — the ة belongs on the adjective,
-  // not after the clarification in brackets
-  const open = label.indexOf(' (')
-  const head = open === -1 ? label : label.slice(0, open)
-  const tail = open === -1 ? '' : label.slice(open)
-
-  const agreed = feminine && head.endsWith('ي') ? `${head}ة` : head
-  return `${agreed}${tail} الجنسية`
+  const agreed = nationalityAdjective(code, form === 'f')
+  if (!agreed) return ''
+  return `${agreed} الجنسية`
 }

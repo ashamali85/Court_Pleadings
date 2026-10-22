@@ -249,6 +249,37 @@ export function isNationalityCode(code: string): boolean {
 }
 
 /**
+ * The nationality agreeing with the person: «كويتي» for a man, «كويتية» for a
+ * woman. The stored labels are the masculine adjective, and the feminine of an
+ * Arabic nisba is the masculine plus ة — which holds for every label in the
+ * list that is an adjective at all.
+ *
+ * Five entries are country names rather than adjectives (جزر سليمان، سانت
+ * كيتس ونيفيس …). They are returned unchanged, because adding ة to a country
+ * name would be worse than leaving it; they are worth fixing in the data.
+ *
+ * «بدون» is not an adjective either and takes no ة. What follows it differs by
+ * document — a pleading writes «بدون جنسية» and the fee contract's own sentence
+ * supplies the next word itself — so that is each caller's to decide, and this
+ * returns the word alone.
+ */
+export function nationalityAdjective(code: string, feminine: boolean): string {
+  if (!code) return ''
+
+  const label = nationalityLabel(code)
+  if (!label) return ''
+  if (code === STATELESS || !feminine) return label
+
+  // «كونغولي (جمهورية الكونغو الديمقراطية)» — the ة belongs on the adjective,
+  // not after the clarification in brackets
+  const open = label.indexOf(' (')
+  const head = open === -1 ? label : label.slice(0, open)
+  const tail = open === -1 ? '' : label.slice(open)
+
+  return `${head.endsWith('ي') ? `${head}ة` : head}${tail}`
+}
+
+/**
  * Where this nationality's flag sits in public/flags.webp, as a ready-made
  * CSS background-position. All 195 live in one 101KB sprite: as separate SVGs
  * they were 1.2MB and cost a request per visible row.

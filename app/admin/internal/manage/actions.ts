@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { audit } from '@/lib/audit'
 import { requireAdmin } from '@/lib/auth'
 import { getContent, translator } from '@/lib/content'
+import { isInternalFormKey } from '@/lib/contracts'
 import db from '@/lib/db'
 import { JOB_DESCRIPTION_MAX, JOB_TITLE_MAX } from '@/lib/internal/jobs'
 
@@ -11,6 +12,18 @@ export type JobsState = { error?: string; ok?: string; fieldError?: string }
 
 const text = (form: FormData, key: string, max: number) =>
   (form.get(key) ?? '').toString().trim().slice(0, max)
+
+/**
+ * Which built-in form the job opens.
+ *
+ * Only a key the code actually offers is stored: the select cannot produce
+ * anything else, but this value decides what a page renders, so a stale or
+ * hand-posted key becomes «no form» rather than a broken page.
+ */
+const feature = (form: FormData): string | null => {
+  const raw = (form.get('feature') ?? '').toString().trim()
+  return raw && isInternalFormKey(raw) ? raw : null
+}
 
 function refresh() {
   revalidatePath('/admin/internal')
@@ -35,6 +48,7 @@ export async function createJob(_prev: JobsState, form: FormData): Promise<JobsS
     data: {
       titleAr,
       descriptionAr: text(form, 'descriptionAr', JOB_DESCRIPTION_MAX) || null,
+      feature: feature(form),
       position: (last?.position ?? 0) + 1,
     },
     select: { id: true },
@@ -72,6 +86,7 @@ export async function updateJob(_prev: JobsState, form: FormData): Promise<JobsS
     data: {
       titleAr,
       descriptionAr: text(form, 'descriptionAr', JOB_DESCRIPTION_MAX) || null,
+      feature: feature(form),
       active: form.get('active') === 'on',
     },
   })

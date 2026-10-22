@@ -3,6 +3,7 @@ import JobsManager from '@/app/admin/internal/manage/jobs-manager'
 import Topbar from '@/components/topbar'
 import { requireAdmin } from '@/lib/auth'
 import { getContent, translator } from '@/lib/content'
+import { internalForms } from '@/lib/contracts'
 import { listAllJobs } from '@/lib/internal/jobs'
 
 export const dynamic = 'force-dynamic'
@@ -31,11 +32,19 @@ export default async function ManageJobsPage() {
 
           <JobsManager
             jobs={jobs}
+            // the built-in forms a job can open, worded from the content screen
+            features={internalForms.map((form) => ({
+              value: form.key,
+              labelAr: t(`template.${form.key}.name`),
+            }))}
             labels={{
               addTitle: t('admin.jobs.addTitle'),
               addHint: t('admin.jobs.addHint'),
               name: t('admin.jobs.name'),
               description: t('admin.jobs.description'),
+              feature: t('admin.jobs.feature'),
+              featureHint: t('admin.jobs.featureHint'),
+              featureNone: t('admin.jobs.featureNone'),
               add: t('admin.jobs.add'),
               save: t('common.save'),
               visible: t('admin.jobs.visible'),

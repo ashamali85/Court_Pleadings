@@ -82,10 +82,60 @@ they add, rename, reorder, hide and delete on `/admin/internal/manage`, and a
 job's page exists at `/admin/internal/<id>` the moment it is saved. No deploy
 is involved in adding one.
 
-`isPlanned()` in `lib/internal/jobs.ts` is the one place that decides whether
-a job's page says «قيد الإعداد» — today every job does, because the pages are
-scaffolding until the office says what each one produces. When a job gets real
-behaviour, that is the function to narrow.
+A job's page shows a form when the job is **linked to one**. The link is the
+`feature` column, set from a dropdown on the maintenance screen, and its value
+is the `key` of one of the forms in `lib/contracts` (`internalForms`).
+`isPlanned()` in `lib/internal/jobs.ts` is the one place that decides whether a
+page says «قيد الإعداد»: it now means «linked to nothing». A job the lawyer
+typed and left unlinked is still a named intention and still says so.
+
+The seed makes sure every built-in form is reachable: it links a job that
+already carries the same name, or adds one at the end of the list. It never
+renames, hides, unlinks or deletes, so the office can reorganise the list
+freely and the seed will leave it alone.
+
+### The office's own forms (lib/contracts)
+
+Not case types. A `TemplateDef` is something a client submits and the lawyer
+reviews; an `InternalFormDef` is filled in by the office and produces a
+document on the spot — no request row, no status, no attachments. What they
+share is the form machinery: sections of `FieldDef`s, so the labels and hints
+reach `/admin/content` the same way and the same inputs are drawn.
+
+`party.ts` is **not** used here and must not be. It is the shared definition
+of a party to a pleading — صفة، ورثة، شركة، جهة حكومية — and a contract has
+none of that; it has §4.2's eight questions, phone and email included.
+
+#### عقد محاماة (جناية أو جنحة)
+
+The lawyer wrote the generator himself. `docs/business-rules/contract-stack.md`
+is his specification, verbatim, and §10 of it is his `build_contract.js`. It
+says, twice: **do not edit contract wording or logic** and «copy verbatim, do
+not modify».
+
+`lib/contracts/criminal-defense/engine.ts` is that file as a module. Three
+mechanical changes were permitted and made — `require` → `import`, the CLI
+shell replaced by an argument and a return, and type annotations — and nothing
+else moved. Do not reword a clause here, ever, even to fix what looks like a
+typo: ask the office.
+
+`npm run contract:check` enforces that in two ways. It pulls every Arabic
+string out of §10's code block and fails unless the port holds exactly the
+same ones, and it reruns §11 — his own test table — against the generated
+.docx: 21 clauses, 22 with a guarantor, 14 placeholders on the blank form, and
+the تفقيط results he verified.
+
+Validation is the website's job and only the website's: §4.4 is explicit that
+the engine checks nothing and prints a yellow `[label]` for anything missing.
+That is right for «نموذج فارغ» and unacceptable in a signed contract, so
+`schema.ts` blocks the form instead — including `first + second === total`,
+the rule §9 notes a JSON Schema cannot express.
+
+Nothing is stored. §4 calls this confidential client data, so the .docx is
+built in memory, streamed once by `/api/contracts/criminal-defense`, and never
+written to the database or a disk. The audit row records which wording
+branches were used and who generated it, never a name, a civil ID or a case
+number — and no request body reaches a log, including on failure.
 
 The lawyer's three areas are `/admin/internal`, `/admin/requests` (the inbox)
 and `/admin/content`; `/admin` is the welcome page that points at them.
@@ -107,10 +157,11 @@ and `/admin/content`; `/admin` is the welcome page that points at them.
 
 ```
 npm run typecheck && npm run smoke && npm run claim:check \
-  && npm run form:check && npm run content:check \
-  && npm run attachments:check && npm run search:check
+  && npm run contract:check && npm run form:check \
+  && npm run content:check && npm run attachments:check \
+  && npm run search:check
 ```
 
-All seven pass before anything is delivered. `content:check` is the one that
+All eight pass before anything is delivered. `content:check` is the one that
 catches a screen asking for wording nobody wrote — that ships as the raw key
 printed where a heading should be, and nothing else notices.

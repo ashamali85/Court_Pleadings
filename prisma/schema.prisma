@@ -155,6 +155,10 @@ model InternalJob {
   id            String   @id @default(cuid())
   titleAr       String
   descriptionAr String?
+  /// Which built-in form this job opens, from lib/contracts (`internalForms`).
+  /// Null means the page is still scaffolding — see `isPlanned`. The job stays
+  /// the lawyer's to rename, reorder and hide whatever it is linked to.
+  feature       String?
   /// where it sits in the list; the lawyer reorders with the arrows
   position      Int      @default(0)
   /// hidden from the list without losing it

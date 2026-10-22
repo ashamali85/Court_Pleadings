@@ -57,11 +57,18 @@ function applyToField(field: FieldDef, base: string, content: ContentMap): Field
 }
 
 /**
+ * Anything the content screen words a form from: a case type, or one of the
+ * office's own internal forms. Only the key and the sections are read, and
+ * both kinds have those — see lib/contracts.
+ */
+type WordedForm = { key: string; sections: SectionDef[] }
+
+/**
  * «المدعي» for the first, «المدعي الثاني» for the second — the numbered copies
  * follow whatever the lawyer words the first one as.
  */
 function sectionTitle(
-  template: TemplateDef<never>,
+  template: WordedForm,
   section: SectionDef,
   content: ContentMap,
 ): string {
@@ -74,9 +81,9 @@ function sectionTitle(
   return section.titleAr.replace(/^\S+/, worded)
 }
 
-/** Template sections with the admin's label/hint/placeholder wording applied. */
+/** Form sections with the admin's label/hint/placeholder wording applied. */
 export function applyContentToSections(
-  template: TemplateDef<never>,
+  template: WordedForm,
   content: ContentMap,
 ): SectionDef[] {
   return template.sections.map((section) => ({

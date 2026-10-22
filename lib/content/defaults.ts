@@ -1,6 +1,7 @@
+import { internalForms } from '@/lib/contracts'
 import { templates } from '@/lib/templates'
 import { baseFieldName } from '@/lib/templates/party'
-import type { FieldDef } from '@/lib/templates/types'
+import type { FieldDef, SectionDef } from '@/lib/templates/types'
 
 /**
  * Every user-visible string in the app, with its built-in Arabic wording.
@@ -19,6 +20,7 @@ export const CONTENT_GROUPS: { key: string; titleAr: string }[] = [
   { key: 'admin', titleAr: 'صفحات المحامي' },
   { key: 'status', titleAr: 'حالات الطلب' },
   { key: 'message', titleAr: 'الرسائل والتنبيهات' },
+  { key: 'contract', titleAr: 'عقود المكتب' },
   { key: 'section', titleAr: 'عناوين أقسام النموذج' },
   { key: 'field', titleAr: 'حقول النموذج' },
   { key: 'override', titleAr: 'حقول التجاوز اليدوي' },
@@ -85,6 +87,10 @@ const STATIC_DEFAULTS: Record<string, string> = {
   'admin.jobs.addHint': 'يظهر العمل في القائمة فور إضافته، وله صفحته الخاصة.',
   'admin.jobs.name': 'اسم العمل',
   'admin.jobs.description': 'وصف مختصر (اختياري)',
+  'admin.jobs.feature': 'ما يفتحه هذا العمل',
+  'admin.jobs.featureHint':
+    'اربط العمل بأحد النماذج الجاهزة ليُفتح النموذج في صفحته. اتركه «بدون نموذج» إذا كان العمل اسماً فقط.',
+  'admin.jobs.featureNone': 'بدون نموذج (قيد الإعداد)',
   'admin.jobs.add': 'إضافة',
   'admin.jobs.added': 'تمت إضافة العمل.',
   'admin.jobs.nameRequired': 'اسم العمل مطلوب.',
@@ -102,6 +108,18 @@ const STATIC_DEFAULTS: Record<string, string> = {
   'admin.jobs.addFirst': 'إضافة أول عمل',
   'admin.jobs.openJob': 'فتح صفحة العمل',
   'admin.internal.back': 'رجوع إلى الأعمال الداخلية',
+
+  // ---------- contracts (الأعمال الداخلية) ----------
+  'contract.generateBtn': 'إصدار العقد (Word)',
+  'contract.generateLoading': 'جارٍ إنشاء العقد…',
+  'contract.generateHint': 'يُنزَّل العقد بصيغة Word جاهزاً للمراجعة والتوقيع.',
+  'contract.generated': 'تم إنشاء العقد وتنزيله.',
+  'contract.failed': 'تعذر إنشاء العقد. راجع الحقول المميزة وأعد المحاولة.',
+  'contract.blankBtn': 'تنزيل نموذج فارغ',
+  'contract.blankHint':
+    'نسخة بكل بنود العقد وخانات صفراء مكان البيانات، للطباعة والتعبئة باليد.',
+  'contract.notStored':
+    'لا يحتفظ النظام بنسخة من العقد بعد تنزيله، فاحفظ الملف في ملف القضية.',
   'client.new.chooseTitle': 'ما نوع الدعوى؟',
   'client.new.chooseHint': 'اختر نوع الدعوى لتظهر لك الأسئلة الخاصة بها.',
   'client.new.changeType': 'تغيير نوع الدعوى',
@@ -182,7 +200,52 @@ const STATIC_DEFAULTS: Record<string, string> = {
   'message.needsFix': 'يحتاج تصحيحاً',
 }
 
-/** Built-in wording for every key, including the ones derived from templates. */
+/**
+ * Every title, label, hint and placeholder of one form, keyed by its owner.
+ *
+ * Templates and the office's own internal forms (lib/contracts) are the same
+ * shape here on purpose: a form is a list of sections of fields wherever it
+ * came from, so neither kind has to be taught about the content screen.
+ */
+function collectSections(
+  out: Record<string, string>,
+  key: string,
+  sections: SectionDef[],
+) {
+  for (const section of sections) {
+    // a section's own title: «المدعي» is worded once, and the numbered copies
+    // take their wording from it
+    if (!section.repeat || section.repeat.index === 1) {
+      out[`section.${key}.${section.key}.title`] = section.titleAr
+    }
+
+    // a repeatable group contributes its own label plus one per row field,
+    // keyed field.<form>.<group>.<row field>.label
+    const walk = (field: FieldDef, prefix: string) => {
+      out[`${prefix}.label`] = field.labelAr
+      // an alternative wording that depends on another answer is editable
+      // too — «عنوان الجهة الحكومية» is as much the lawyer's word as the
+      // label it replaces
+      field.labelWhen?.forEach((alt, i) => {
+        out[`${prefix}.label.when${i + 1}`] = alt.labelAr
+      })
+      if (field.hintAr) out[`${prefix}.hint`] = field.hintAr
+      if (field.placeholder) out[`${prefix}.placeholder`] = field.placeholder
+      for (const sub of field.rowFields ?? []) {
+        walk(sub, `${prefix}.${sub.name}`)
+      }
+    }
+
+    for (const field of section.fields) {
+      // every party of a side asks the same questions, so they share one set
+      // of labels; without this the lawyer would be shown four copies of
+      // each and would have to edit every one
+      walk(field, `field.${key}.${baseFieldName(field.name)}`)
+    }
+  }
+}
+
+/** Built-in wording for every key, including the ones derived from forms. */
 export function contentDefaults(): Record<string, string> {
   const out: Record<string, string> = { ...STATIC_DEFAULTS }
 
@@ -190,41 +253,18 @@ export function contentDefaults(): Record<string, string> {
     out[`template.${template.key}.name`] = template.nameAr
     out[`template.${template.key}.description`] = template.descriptionAr
 
-    for (const section of template.sections) {
-      // likewise a section's own title: «المدعي» is worded once, and the
-      // numbered copies take their wording from it
-      if (!section.repeat || section.repeat.index === 1) {
-        out[`section.${template.key}.${section.key}.title`] = section.titleAr
-      }
-
-      // a repeatable group contributes its own label plus one per row field,
-      // keyed field.<template>.<group>.<row field>.label
-      const walk = (field: FieldDef, prefix: string) => {
-        out[`${prefix}.label`] = field.labelAr
-        // an alternative wording that depends on another answer is editable
-        // too — «عنوان الجهة الحكومية» is as much the lawyer's word as the
-        // label it replaces
-        field.labelWhen?.forEach((alt, i) => {
-          out[`${prefix}.label.when${i + 1}`] = alt.labelAr
-        })
-        if (field.hintAr) out[`${prefix}.hint`] = field.hintAr
-        if (field.placeholder) out[`${prefix}.placeholder`] = field.placeholder
-        for (const sub of field.rowFields ?? []) {
-          walk(sub, `${prefix}.${sub.name}`)
-        }
-      }
-
-      for (const field of section.fields) {
-        // every party of a side asks the same questions, so they share one set
-        // of labels; without this the lawyer would be shown four copies of
-        // each and would have to edit every one
-        walk(field, `field.${template.key}.${baseFieldName(field.name)}`)
-      }
-    }
+    collectSections(out, template.key, template.sections)
 
     for (const item of template.overridable) {
       out[`override.${template.key}.${item.name}.label`] = item.labelAr
     }
+  }
+
+  // الأعمال الداخلية — the office's own forms, worded from the same screen
+  for (const form of internalForms) {
+    out[`template.${form.key}.name`] = form.nameAr
+    out[`template.${form.key}.description`] = form.descriptionAr
+    collectSections(out, form.key, form.sections)
   }
 
   return out
