@@ -42,7 +42,12 @@ import {
 import { moneyPhrase } from '@/lib/claim/money'
 import { OFFICE } from '@/lib/claim/office'
 import { longDateAr } from '@/lib/numerals'
-import { COMPANY_FORM_LABEL, partyForm, type PartyValues } from '@/lib/templates/party'
+import {
+  COMPANY_FORM_LABEL,
+  partyForm,
+  rowAsParty,
+  type PartyValues,
+} from '@/lib/templates/party'
 
 /** a gap the lawyer fills in Word, where the office leaves one */
 const GAP = '     '
@@ -87,12 +92,10 @@ export function partyLine(
       return person(party.full_name, party.civil_id, party.nationality, form)
 
     case 'several':
-      return party.persons
-        .filter((p) => p.name.trim())
-        .map(
-          (p, i) =>
-            `${i + 1}- ${person(p.name, p.civil_id, p.nationality, 'm', false)}`,
-        )
+      // each party written as what it is, by this same function
+      return party.parties
+        .map((row, i) => `${i + 1}- ${partyLine(rowAsParty(row), options)}`)
+        .filter((line) => line.replace(/^\d+- /, '').trim())
         .join('\n')
 
     case 'heirs': {
@@ -165,9 +168,9 @@ export function partyName(party: PartyValues): string {
     case 'natural':
       return party.full_name.trim()
     case 'several':
-      return party.persons
-        .filter((p) => p.name.trim())
-        .map((p) => p.name.trim())
+      return party.parties
+        .map((row) => partyName(rowAsParty(row)))
+        .filter(Boolean)
         .join(' و')
     case 'heirs':
       return `ورثة المرحوم/ ${party.deceased_name.trim()}`

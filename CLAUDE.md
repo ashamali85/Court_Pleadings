@@ -36,6 +36,14 @@ a new case type genuinely needs a different party question, the question
 belongs in `party.ts` for everyone, or it is a fact about the case rather than
 about the party and belongs in the case's own section.
 
+A side can be one party or several. «أكثر من طرف» holds a list in which each
+party has its own صفة — party 1 a company, party 2 a natural person, party 3 a
+ministry — so a row is a party in its own right: `rowAsParty()` turns it into
+one, and every rule and every sentence then works on it without being written
+twice. ورثة is deliberately missing from that list, because heirs are
+themselves a list and a list inside a list is a form nobody can fill in; a side
+that is entirely heirs picks ورثة as its own صفة.
+
 The one difference between the sides, everywhere: **جهة حكومية is offered to
 المدعى عليه only** (`PRIVATE_PARTY_TYPES` versus `PARTY_TYPES`). A government
 body can be sued through this portal; it does not sue through it.
