@@ -1,7 +1,6 @@
 import { z } from 'zod'
 import { weekdayAr } from '@/lib/numerals'
 import {
-  blankPartyRow,
   COMPANY_FORM_LABEL,
   DEFENDANT,
   PARTY_SIDES,
@@ -9,7 +8,6 @@ import {
   partySection,
   partyShape,
   personLine,
-  rowAsParty,
   readParty,
   validateParty,
   type PartyValues,
@@ -29,13 +27,16 @@ function partyLine(party: PartyValues): string {
     case 'natural':
       return personLine(party.full_name, party.civil_id, party.nationality)
 
-    case 'several':
-      // «1- شركة … 2- فلان الفلاني …» — each party written as what it is,
-      // by the same function, numbered in the order they were entered
-      return party.parties
-        .map((row, i) => `${i + 1}- ${partyLine(rowAsParty(row))}`)
-        .filter((line) => line.replace(/^\d+- /, '').trim())
+    case 'several': {
+      // «1- فلان … 2- فلان …» — each party in their own right, numbered
+      return party.persons
+        .filter((person) => person.name.trim())
+        .map(
+          (person, i) =>
+            `${i + 1}- ${personLine(person.name, person.civil_id, person.nationality)}`,
+        )
         .join('\n')
+    }
 
     case 'heirs': {
       const heirs = party.heirs
@@ -128,7 +129,7 @@ export const evictionSchema = z
     plaintiff_nationality: partyShape.nationality,
     plaintiff_deceased_name: partyShape.deceased_name,
     plaintiff_heirs: partyShape.heirs,
-    plaintiff_parties: partyShape.parties,
+    plaintiff_persons: partyShape.persons,
     plaintiff_company_name: partyShape.company_name,
     plaintiff_company_form: partyShape.company_form,
     plaintiff_company_register: partyShape.company_register,
@@ -148,7 +149,7 @@ export const evictionSchema = z
     defendant_nationality: partyShape.nationality,
     defendant_deceased_name: partyShape.deceased_name,
     defendant_heirs: partyShape.heirs,
-    defendant_parties: partyShape.parties,
+    defendant_persons: partyShape.persons,
     defendant_company_name: partyShape.company_name,
     defendant_company_form: partyShape.company_form,
     defendant_company_register: partyShape.company_register,
@@ -236,7 +237,10 @@ export const evictionDefaults: EvictionValues = {
   plaintiff_nationality: 'KW',
   plaintiff_deceased_name: '',
   plaintiff_heirs: [{ name: '', civil_id: '', nationality: 'KW' }],
-  plaintiff_parties: [blankPartyRow(), blankPartyRow()],
+  plaintiff_persons: [
+    { name: '', civil_id: '', nationality: 'KW' },
+    { name: '', civil_id: '', nationality: 'KW' },
+  ],
   plaintiff_company_name: '',
   plaintiff_company_form: '',
   plaintiff_company_register: '',
@@ -256,7 +260,10 @@ export const evictionDefaults: EvictionValues = {
   defendant_nationality: 'KW',
   defendant_deceased_name: '',
   defendant_heirs: [{ name: '', civil_id: '', nationality: 'KW' }],
-  defendant_parties: [blankPartyRow(), blankPartyRow()],
+  defendant_persons: [
+    { name: '', civil_id: '', nationality: 'KW' },
+    { name: '', civil_id: '', nationality: 'KW' },
+  ],
   defendant_company_name: '',
   defendant_company_form: '',
   defendant_company_register: '',

@@ -40,7 +40,7 @@ import {
   type Instrument,
 } from '@/lib/claim/instruments'
 import { amountInWords, formatMoney, moneyPhrase } from '@/lib/claim/money'
-import { blankPartyRow, type PartyValues } from '@/lib/templates/party'
+import type { PartyValues } from '@/lib/templates/party'
 import { allFields, formDataToValues, templates } from '@/lib/templates'
 import { claimDefaults, claimTemplate } from '@/lib/templates/claim'
 import { fieldString, isFieldVisible } from '@/lib/templates/visibility'
@@ -64,7 +64,7 @@ function party(over: Partial<PartyValues>): PartyValues {
     gender: '',
     civil_id: '',
     nationality: '',
-    parties: [],
+    persons: [],
     deceased_name: '',
     heirs: [],
     company_name: '',
@@ -856,54 +856,6 @@ console.log('\n--- the request form')
     { lawsuit_requests: 'الطلبات كما كتبها المحامي' },
   ) as Record<string, string>
   check('an override wins', overridden.lawsuit_requests, 'الطلبات كما كتبها المحامي')
-}
-
-// ---------- several parties on one side, each with its own صفة ----------
-console.log('\n--- أكثر من طرف')
-{
-  const mixed = party({
-    type: 'several',
-    parties: [
-      {
-        ...blankPartyRow(),
-        type: 'company',
-        company_name: 'شركة المثال التجارية',
-        company_form: 'single_person',
-        company_civil_no: '0000000',
-        company_register: '000000',
-      },
-      {
-        ...blankPartyRow(),
-        type: 'natural',
-        full_name: 'وسمية سعد فهاد العجمي',
-        gender: 'female',
-        civil_id: '280110601156',
-        nationality: 'KW',
-      },
-    ],
-  })
-
-  const lawsuit = composeLawsuit({ ...invoiceCase, respondent: mixed })
-
-  check(
-    'each party is written in this claim’s own words',
-    lawsuit.respondent,
-    '1- شركة المثال التجارية شركة الشخص الواحد – الرقم المدني للجهة (0000000) – ' +
-      'رقم السجل التجاري (000000)\n' +
-      '2- السيدة/ وسمية سعد فهاد العجمي – كويتية الجنسية – بطاقة مدنية رقم (280110601156)',
-  )
-  check(
-    'and the side reads as plural throughout',
-    lawsuit.announced,
-    'وأعلنتهم بالآتي:',
-  )
-  check('إلزامهم', lawsuit.requests[1].includes('بإلزام المعلن إليهم بأن يؤدوا'), true)
-  check(
-    'the exhibit list names them all',
-    composeExhibits({ ...invoiceCase, respondent: mixed }).to,
-    // و is written onto the next word, not spaced from it
-    'شركة المثال التجارية شركة الشخص الواحد ووسمية سعد فهاد العجمي',
-  )
 }
 
 console.log(failures ? `\n${failures} FAILED` : '\nAll checks passed.')

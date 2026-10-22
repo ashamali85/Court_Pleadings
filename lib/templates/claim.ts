@@ -31,7 +31,6 @@ import {
 } from '@/lib/claim/instruments'
 import { formatMoney } from '@/lib/claim/money'
 import {
-  blankPartyRow,
   DEFENDANT,
   PARTY_SIDES,
   PLAINTIFF,
@@ -75,7 +74,7 @@ export const claimSchema = z
     plaintiff_gender: partyShape.gender,
     plaintiff_civil_id: partyShape.civil_id,
     plaintiff_nationality: partyShape.nationality,
-    plaintiff_parties: partyShape.parties,
+    plaintiff_persons: partyShape.persons,
     plaintiff_deceased_name: partyShape.deceased_name,
     plaintiff_heirs: partyShape.heirs,
     plaintiff_company_name: partyShape.company_name,
@@ -95,7 +94,7 @@ export const claimSchema = z
     defendant_gender: partyShape.gender,
     defendant_civil_id: partyShape.civil_id,
     defendant_nationality: partyShape.nationality,
-    defendant_parties: partyShape.parties,
+    defendant_persons: partyShape.persons,
     defendant_deceased_name: partyShape.deceased_name,
     defendant_heirs: partyShape.heirs,
     defendant_company_name: partyShape.company_name,
@@ -194,7 +193,10 @@ export const claimDefaults: ClaimValues = {
   plaintiff_gender: '',
   plaintiff_civil_id: '',
   plaintiff_nationality: 'KW',
-  plaintiff_parties: [blankPartyRow(), blankPartyRow()],
+  plaintiff_persons: [
+    { name: '', civil_id: '', nationality: 'KW' },
+    { name: '', civil_id: '', nationality: 'KW' },
+  ],
   plaintiff_deceased_name: '',
   plaintiff_heirs: [{ name: '', civil_id: '', nationality: 'KW' }],
   plaintiff_company_name: '',
@@ -214,7 +216,10 @@ export const claimDefaults: ClaimValues = {
   defendant_gender: '',
   defendant_civil_id: '',
   defendant_nationality: 'KW',
-  defendant_parties: [blankPartyRow(), blankPartyRow()],
+  defendant_persons: [
+    { name: '', civil_id: '', nationality: 'KW' },
+    { name: '', civil_id: '', nationality: 'KW' },
+  ],
   defendant_deceased_name: '',
   defendant_heirs: [{ name: '', civil_id: '', nationality: 'KW' }],
   defendant_company_name: '',
