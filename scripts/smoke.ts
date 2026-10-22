@@ -446,5 +446,85 @@ const out = renderDocx(templateBytes, evictionTemplate.derive(parsed.data, {}))
 writeFileSync(join(process.cwd(), 'sample-output.docx'), out)
 console.log(`PASS  wrote sample-output.docx (${out.byteLength} bytes)`)
 
+// ---------- several claimants, several respondents ----------
+//
+// A side with more than one party is written as a numbered list, and every
+// party is held to its own shape's rules under its own section's keys.
+console.log('\n--- أكثر من مدعٍ')
+{
+  const two = {
+    ...sample,
+    plaintiff_count: 2,
+    plaintiff_type: 'company',
+    plaintiff_company_name: 'شركة الخليج العقارية',
+    plaintiff_company_form: 'llc',
+    plaintiff_company_register: '123456',
+    plaintiff_company_civil_no: '100234567',
+    plaintiff2_type: 'natural',
+    plaintiff2_full_name: 'خالد يوسف العنزي',
+    plaintiff2_gender: 'male',
+    plaintiff2_civil_id: '289010112345',
+    plaintiff2_nationality: 'KW',
+  }
+
+  const parsed = evictionTemplate.schema.safeParse(two)
+  check(
+    'two claimants validate',
+    parsed.success ? '' : parsed.error.issues.map((i) => i.path.join('.')).join(', '),
+    '',
+  )
+  if (parsed.success) {
+    const out = evictionTemplate.derive(parsed.data, {}) as Record<string, string>
+    check(
+      'and are written as a numbered list',
+      out.plaintiff_name,
+      '1- شركة الخليج العقارية – ذات مسؤولية محدودة – سجل تجاري رقم (123456) – ' +
+        'رقم الجهة المدني (100234567)\n' +
+        '2- خالد يوسف العنزي – كويتي الجنسية – بطاقة مدنية رقم (289010112345)',
+    )
+    check(
+      'while the single respondent is written plainly',
+      out.defendant_name.startsWith('1- '),
+      false,
+    )
+  }
+
+  const errorAt = (patch: Record<string, unknown>) => {
+    const result = evictionTemplate.schema.safeParse({ ...two, ...patch })
+    return result.success ? '' : result.error.issues[0].path.join('.')
+  }
+
+  check(
+    'the second claimant is held to its own rules',
+    errorAt({ plaintiff2_civil_id: '123' }),
+    'plaintiff2_civil_id',
+  )
+  check(
+    'and may not be a ministry either',
+    errorAt({ plaintiff2_type: 'government', plaintiff2_government_name: 'وزارة' }),
+    'plaintiff2_type',
+  )
+  check(
+    'a party past the count is not validated at all',
+    evictionTemplate.schema.safeParse({ ...sample, plaintiff2_civil_id: '123' })
+      .success,
+    true,
+  )
+  check(
+    'and is not written into the pleading',
+    (
+      evictionTemplate.derive(
+        evictionTemplate.schema.parse({
+          ...sample,
+          plaintiff2_type: 'natural',
+          plaintiff2_full_name: 'لا ينبغي أن يظهر',
+        }),
+        {},
+      ) as Record<string, string>
+    ).plaintiff_name.includes('لا ينبغي أن يظهر'),
+    false,
+  )
+}
+
 console.log(failures === 0 ? '\nAll checks passed.' : `\n${failures} check(s) failed.`)
 process.exit(failures === 0 ? 0 : 1)

@@ -80,6 +80,7 @@ export default function SectionCard({
   hasError = false,
   errorLabel = 'يحتاج تصحيحاً',
   badge,
+  actionsSlot,
 }: {
   id?: string
   title: string
@@ -88,6 +89,8 @@ export default function SectionCard({
   hasError?: boolean
   errorLabel?: string
   badge?: string
+  /** buttons beside the title — adding another of this section, removing it */
+  actionsSlot?: React.ReactNode
 }) {
   const generatedId = useId()
   const sectionId = id ?? generatedId
@@ -112,22 +115,27 @@ export default function SectionCard({
 
   return (
     <div className="card collapsible">
-      <button
-        type="button"
-        className="section-head"
-        aria-expanded={open}
-        aria-controls={bodyId}
-        onClick={toggle}
-      >
-        <span>
-          {title}
-          {hasError ? <span className="err-dot">{errorLabel}</span> : null}
-          {!hasError && badge ? <span className="count-dot">{badge}</span> : null}
-        </span>
-        <span className="chev" aria-hidden="true">
-          ▾
-        </span>
-      </button>
+      {/* the header strip is one toggle button; anything that does something
+          else has to sit beside it, because a button cannot hold a button */}
+      <div className="section-head-row">
+        <button
+          type="button"
+          className="section-head"
+          aria-expanded={open}
+          aria-controls={bodyId}
+          onClick={toggle}
+        >
+          <span>
+            {title}
+            {hasError ? <span className="err-dot">{errorLabel}</span> : null}
+            {!hasError && badge ? <span className="count-dot">{badge}</span> : null}
+          </span>
+          <span className="chev" aria-hidden="true">
+            ▾
+          </span>
+        </button>
+        {actionsSlot ? <div className="section-actions">{actionsSlot}</div> : null}
+      </div>
 
       <div className="section-body" id={bodyId} hidden={!open}>
         {children}

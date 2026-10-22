@@ -18,7 +18,7 @@ import {
   composeExhibits,
   composeLawsuit,
   composeOrder,
-  partyName,
+  sideName,
 } from '@/lib/claim/compose'
 import { courtLevel, documentsFor } from '@/lib/claim/court'
 import { CLAIM_DOCUMENT_LABEL } from '@/lib/claim/grammar'
@@ -33,11 +33,18 @@ import { formatMoney } from '@/lib/claim/money'
 import {
   DEFENDANT,
   PARTY_SIDES,
+  partyAt,
+  sideDefaults,
+  partyCountField,
+  partyCountShape,
+  partyKeys,
+  partyPrefix,
+  partySections,
+  MAX_PARTIES,
   PLAINTIFF,
-  partySection,
   partyShape,
-  readParty,
-  validateParty,
+  readSide,
+  validateSide,
 } from '@/lib/templates/party'
 import type { FieldDef, Placeholders, TemplateDef } from '@/lib/templates/types'
 
@@ -68,44 +75,17 @@ const instrumentSchema = z.object({
 export const claimSchema = z
   .object({
     /* the two parties, exactly as every other pleading type asks them */
-    plaintiff_type: partyShape.type,
-    plaintiff_name: partyShape.name,
-    plaintiff_full_name: partyShape.full_name,
-    plaintiff_gender: partyShape.gender,
-    plaintiff_civil_id: partyShape.civil_id,
-    plaintiff_nationality: partyShape.nationality,
-    plaintiff_deceased_name: partyShape.deceased_name,
-    plaintiff_heirs: partyShape.heirs,
-    plaintiff_company_name: partyShape.company_name,
-    plaintiff_company_form: partyShape.company_form,
-    plaintiff_company_register: partyShape.company_register,
-    plaintiff_company_civil_no: partyShape.company_civil_no,
-    plaintiff_establishment_name: partyShape.establishment_name,
-    plaintiff_owner_name: partyShape.owner_name,
-    plaintiff_owner_civil_id: partyShape.owner_civil_id,
-    plaintiff_owner_nationality: partyShape.owner_nationality,
-    plaintiff_licence_register: partyShape.licence_register,
-    plaintiff_licence_civil_no: partyShape.licence_civil_no,
+    ...partyKeys('plaintiff'),
+    ...partyKeys('plaintiff2'),
+    ...partyKeys('plaintiff3'),
+    ...partyKeys('plaintiff4'),
+    plaintiff_count: partyCountShape,
 
-    defendant_type: partyShape.type,
-    defendant_name: partyShape.name,
-    defendant_full_name: partyShape.full_name,
-    defendant_gender: partyShape.gender,
-    defendant_civil_id: partyShape.civil_id,
-    defendant_nationality: partyShape.nationality,
-    defendant_deceased_name: partyShape.deceased_name,
-    defendant_heirs: partyShape.heirs,
-    defendant_company_name: partyShape.company_name,
-    defendant_company_form: partyShape.company_form,
-    defendant_company_register: partyShape.company_register,
-    defendant_company_civil_no: partyShape.company_civil_no,
-    defendant_establishment_name: partyShape.establishment_name,
-    defendant_owner_name: partyShape.owner_name,
-    defendant_owner_civil_id: partyShape.owner_civil_id,
-    defendant_owner_nationality: partyShape.owner_nationality,
-    defendant_licence_register: partyShape.licence_register,
-    defendant_licence_civil_no: partyShape.licence_civil_no,
-    defendant_government_name: partyShape.government_name,
+    ...partyKeys('defendant'),
+    ...partyKeys('defendant2'),
+    ...partyKeys('defendant3'),
+    ...partyKeys('defendant4'),
+    defendant_count: partyCountShape,
 
     defendant_address: z.string().trim().min(3, 'عنوان المعلن إليه مطلوب').max(2000),
 
@@ -137,13 +117,7 @@ export const claimSchema = z
 
     // the two parties follow the shared rules, like every pleading type
     for (const side of PARTY_SIDES) {
-      const party = readParty(v, side.prefix)
-      need(
-        party.type === undefined || side.types.includes(party.type),
-        [`${side.prefix}_type`],
-        `صفة ${side.labelAr} غير مقبولة`,
-      )
-      validateParty(party, side.prefix, need, side.labelAr)
+      validateSide(v, side, need)
     }
 
     if (v.relationship === 'other') {
@@ -183,46 +157,14 @@ export const claimSchema = z
 export type ClaimValues = z.infer<typeof claimSchema>
 
 export const claimDefaults: ClaimValues = {
-  // a new form starts on the commonest shape, as the eviction petition does;
-  // leaving it unset would show the legacy free-text field on a blank form
-  plaintiff_type: 'natural',
-  plaintiff_name: '',
-  plaintiff_full_name: '',
-  plaintiff_gender: '',
-  plaintiff_civil_id: '',
-  plaintiff_nationality: 'KW',
-  plaintiff_deceased_name: '',
-  plaintiff_heirs: [{ name: '', civil_id: '', nationality: 'KW' }],
-  plaintiff_company_name: '',
-  plaintiff_company_form: '',
-  plaintiff_company_register: '',
-  plaintiff_company_civil_no: '',
-  plaintiff_establishment_name: '',
-  plaintiff_owner_name: '',
-  plaintiff_owner_civil_id: '',
-  plaintiff_owner_nationality: 'KW',
-  plaintiff_licence_register: '',
-  plaintiff_licence_civil_no: '',
-
-  defendant_type: 'natural',
-  defendant_name: '',
-  defendant_full_name: '',
-  defendant_gender: '',
-  defendant_civil_id: '',
-  defendant_nationality: 'KW',
-  defendant_deceased_name: '',
-  defendant_heirs: [{ name: '', civil_id: '', nationality: 'KW' }],
-  defendant_company_name: '',
-  defendant_company_form: '',
-  defendant_company_register: '',
-  defendant_company_civil_no: '',
-  defendant_establishment_name: '',
-  defendant_owner_name: '',
-  defendant_owner_civil_id: '',
-  defendant_owner_nationality: 'KW',
-  defendant_licence_register: '',
-  defendant_licence_civil_no: '',
-  defendant_government_name: '',
+  ...sideDefaults(PLAINTIFF, {
+    plaintiff_type: 'natural',
+    plaintiff_nationality: 'KW',
+  }),
+  ...sideDefaults(DEFENDANT, {
+    defendant_type: 'natural',
+    defendant_nationality: 'KW',
+  }),
   defendant_address: '',
 
   amount: 0,
@@ -256,8 +198,8 @@ export const claimDefaults: ClaimValues = {
 
 export function toCase(values: ClaimValues): ClaimCase {
   return {
-    claimant: readParty(values, PLAINTIFF.prefix),
-    respondent: readParty(values, DEFENDANT.prefix),
+    claimant: readSide(values as unknown as Record<string, unknown>, PLAINTIFF),
+    respondent: readSide(values as unknown as Record<string, unknown>, DEFENDANT),
     respondentAddress: values.defendant_address,
     amount: values.amount,
     relationship: values.relationship,
@@ -601,15 +543,15 @@ export const claimTemplate: TemplateDef<ClaimValues> = {
       claim.instruments.length > 1 && !reconcile.ok
         ? ` · ⚠ مجموع السندات ${formatMoney(reconcile.total)} لا يساوي المطالبة`
         : ''
-    return `${partyName(toCase(v).respondent) || '—'} · ${formatMoney(v.amount)} د.ك. · ${
+    return `${sideName(toCase(v).respondent) || '—'} · ${formatMoney(v.amount)} د.ك. · ${
       claim.instruments.length
     } سند · ${count} مخرجات${mismatch}`
   },
   sections: [
     // the two party sections are the shared ones, identical to every other
     // pleading type; the service address is a fact about this case
-    partySection(PLAINTIFF),
-    partySection(DEFENDANT, [fields.defendant_address]),
+    ...partySections(PLAINTIFF),
+    ...partySections(DEFENDANT, [fields.defendant_address]),
     {
       key: 'debt',
       titleAr: 'الدين وسنده',

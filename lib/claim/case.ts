@@ -20,8 +20,9 @@ export const RELATIONSHIPS = [
 ] as const
 
 export type ClaimCase = {
-  claimant: PartyValues
-  respondent: PartyValues
+  /** every claimant, in the order the form collected them */
+  claimant: PartyValues[]
+  respondent: PartyValues[]
   /** عنوان إعلان المعلن إليه — never the automated address number */
   respondentAddress: string
   /** مبلغ المطالبة بالدينار */

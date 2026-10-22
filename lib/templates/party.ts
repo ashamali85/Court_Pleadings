@@ -99,10 +99,64 @@ export const DEFENDANT = {
   types: PARTY_TYPES as readonly PartyType[],
 } as const
 
-export type PartySide = typeof PLAINTIFF | typeof DEFENDANT
+export type PartySide = {
+  prefix: string
+  labelAr: string
+  sectionKey: string
+  types: readonly PartyType[]
+}
 
 /** Both sides, in the order every form shows them. */
 export const PARTY_SIDES: readonly PartySide[] = [PLAINTIFF, DEFENDANT]
+
+/**
+ * How many parties one side may have. A case with more than four claimants is
+ * rare enough that the office can split it; every extra one costs a full set
+ * of keys in the schema whether it is used or not.
+ */
+export const MAX_PARTIES = 4
+
+/** «plaintiff», then «plaintiff2», «plaintiff3» … */
+export function partyPrefix(side: PartySide, index: number): string {
+  return index === 1 ? side.prefix : `${side.prefix}${index}`
+}
+
+/** the field holding how many parties this side currently has */
+export function partyCountField(side: PartySide): string {
+  return `${side.prefix}_count`
+}
+
+/**
+ * The second claimant is still «المدعي»، numbered. Arabic numbers the series
+ * rather than renaming it.
+ */
+const ORDINALS = ['', '', ' الثاني', ' الثالث', ' الرابع', ' الخامس']
+
+export function partyLabel(side: PartySide, index: number): string {
+  return index === 1 ? side.labelAr : `${side.labelAr}${ORDINALS[index] ?? ` ${index}`}`
+}
+
+/** one of a side's parties, as a side in its own right */
+export function partyAt(side: PartySide, index: number): PartySide {
+  return {
+    prefix: partyPrefix(side, index),
+    labelAr: partyLabel(side, index),
+    sectionKey: partyPrefix(side, index),
+    types: side.types,
+  }
+}
+
+/**
+ * A field name with its party number stripped: «plaintiff2_full_name» reads
+ * back as «plaintiff_full_name».
+ *
+ * Every party on a side asks the same questions, so they share one set of
+ * labels on the content screen. Without this the lawyer would be shown four
+ * copies of every label and would have to edit each one.
+ */
+export function baseFieldName(name: string): string {
+  return name.replace(/^([a-z]+?)\d+_/, '$1_')
+}
 
 /** The zod declarations for one side. Spread into the schema under a prefix. */
 export const partyShape = {
@@ -360,13 +414,105 @@ export function validateParty(
  * the party. The party fields themselves are never passed in and never
  * overridden.
  */
-export function partySection(side: PartySide, extra: FieldDef[] = []): SectionDef {
+export function partySection(
+  side: PartySide,
+  extra: FieldDef[] = [],
+  repeat?: SectionDef['repeat'],
+): SectionDef {
   return {
     key: side.sectionKey,
     titleAr: side.labelAr,
     fields: [...partyFields(side.prefix, side.labelAr, side.types), ...extra],
+    repeat,
   }
 }
+
+/**
+ * One side as a series of sections: the party, then the second party, then the
+ * third — each a complete party section with its own صفة and its own rules.
+ * `extra` goes on the first one only, because a service address is a fact
+ * about the case and is asked once.
+ */
+export function partySections(side: PartySide, extra: FieldDef[] = []): SectionDef[] {
+  return Array.from({ length: MAX_PARTIES }, (_, i) => {
+    const index = i + 1
+    return partySection(partyAt(side, index), index === 1 ? extra : [], {
+      countField: partyCountField(side),
+      index,
+      max: MAX_PARTIES,
+      addLabelAr: `إضافة ${side.labelAr}`,
+      removeLabelAr: `حذف ${partyLabel(side, index)}`,
+    })
+  })
+}
+
+/**
+ * The zod keys for one party, under its own prefix. The mapped type keeps the
+ * names exact — `partyKeys('plaintiff2')` really does produce
+ * `plaintiff2_full_name` — so nothing is lost by generating them.
+ */
+type Prefixed<P extends string, T> = {
+  [K in keyof T & string as `${P}_${K}`]: T[K]
+}
+
+export function partyKeys<P extends string>(prefix: P): Prefixed<P, typeof partyShape> {
+  return Object.fromEntries(
+    Object.entries(partyShape).map(([key, value]) => [`${prefix}_${key}`, value]),
+  ) as Prefixed<P, typeof partyShape>
+}
+
+/**
+ * What a blank party's keys hold, under its own prefix — the other half of
+ * `partyKeys`, so a template's defaults are generated from the same list its
+ * schema is and cannot fall out of step with it.
+ */
+export function partyDefaults(
+  prefix: string,
+  over: Record<string, unknown> = {},
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const [key, shape] of Object.entries(partyShape)) {
+    out[`${prefix}_${key}`] = shape.safeParse(undefined).data
+  }
+  return { ...out, ...over }
+}
+
+/** one party's defaults, with exact key names — the twin of `partyKeys` */
+type PartyDefaultsFor<P extends string> = {
+  [K in keyof typeof partyShape & string as `${P}_${K}`]: z.infer<
+    (typeof partyShape)[K]
+  >
+}
+
+/**
+ * Every party of one side, blank, plus the count that says how many are shown.
+ *
+ * The return type names all four parties' keys, so a template's defaults still
+ * fail to compile if the shared party model gains a field and nothing supplies
+ * a default for it. The four lines below follow MAX_PARTIES by hand; a fifth
+ * party means a fifth line.
+ */
+export function sideDefaults<P extends string>(
+  side: PartySide & { prefix: P },
+  first: Partial<PartyDefaultsFor<P>> = {},
+): PartyDefaultsFor<P> &
+  PartyDefaultsFor<`${P}2`> &
+  PartyDefaultsFor<`${P}3`> &
+  PartyDefaultsFor<`${P}4`> &
+  Record<`${P}_count`, number> {
+  let out: Record<string, unknown> = { [partyCountField(side)]: 1 }
+  for (let i = 1; i <= MAX_PARTIES; i += 1) {
+    out = { ...out, ...partyDefaults(partyPrefix(side, i), i === 1 ? first : {}) }
+  }
+  return out as PartyDefaultsFor<P> &
+    PartyDefaultsFor<`${P}2`> &
+    PartyDefaultsFor<`${P}3`> &
+    PartyDefaultsFor<`${P}4`> &
+    Record<`${P}_count`, number>
+}
+
+/** how many parties a side may hold, as a schema key */
+export const partyCountShape = z.coerce.number().int().min(1).max(MAX_PARTIES).catch(1)
 
 const nationalityOptions = NATIONALITIES.map((n) => ({
   value: n.value,
@@ -671,5 +817,81 @@ export function partyFields(
     return when.equals.some(
       (value) => !isPartyType(value) || offers(value as PartyType),
     )
+  })
+}
+
+/**
+ * Remove one party from a side, moving the ones after it up.
+ *
+ * Without the shift, removing the second of three would leave a gap that the
+ * pleading would print as a blank party. The values move rather than the
+ * indexes, so nothing stored has to know a party was ever removed.
+ */
+export function removePartyAt(
+  values: Record<string, unknown>,
+  side: PartySide,
+  removed: number,
+  count: number,
+): Record<string, unknown> {
+  const next = { ...values }
+  const keys = Object.keys(partyShape)
+
+  for (let i = removed; i < count; i += 1) {
+    const to = partyPrefix(side, i)
+    const from = partyPrefix(side, i + 1)
+    for (const key of keys) next[`${to}_${key}`] = next[`${from}_${key}`]
+  }
+
+  // the last party is now a duplicate of the one before it; blank it
+  const last = partyPrefix(side, count)
+  const blank = partyShape
+  for (const key of keys) {
+    next[`${last}_${key}`] = blank[key as keyof typeof blank].safeParse(undefined).data
+  }
+
+  next[partyCountField(side)] = Math.max(1, count - 1)
+  return next
+}
+
+/**
+ * Every party a side currently holds, in order. The count is clamped, so a
+ * hand-posted request cannot ask the pleading to print a fifth claimant that
+ * the form never collected.
+ */
+export function readSide(
+  values: Record<string, unknown>,
+  side: PartySide,
+): PartyValues[] {
+  const raw = Number(values[partyCountField(side)] ?? 1)
+  const count = Math.min(
+    MAX_PARTIES,
+    Math.max(1, Number.isFinite(raw) ? Math.floor(raw) : 1),
+  )
+  return Array.from({ length: count }, (_, i) =>
+    readParty(values, partyPrefix(side, i + 1)),
+  )
+}
+
+/**
+ * The rules for a whole side: each party checked as the party it is, with its
+ * errors reported against its own section's inputs.
+ */
+export function validateSide(
+  values: Record<string, unknown>,
+  side: PartySide,
+  need: Issue,
+): void {
+  readSide(values, side).forEach((party, i) => {
+    const index = i + 1
+    const prefix = partyPrefix(side, index)
+    const labelAr = partyLabel(side, index)
+    // the form offers each side only its own shapes; a request that arrives
+    // with another one was not filled in on these screens
+    need(
+      party.type === undefined || side.types.includes(party.type),
+      [`${prefix}_type`],
+      `صفة ${labelAr} غير مقبولة`,
+    )
+    validateParty(party, prefix, need, labelAr)
   })
 }

@@ -148,6 +148,31 @@ export function partyLine(
 }
 
 /**
+ * A whole side: its grammatical form, its block, and its bare name.
+ *
+ * Two claimants are plural whatever either of them is on their own, and the
+ * block numbers them the way a pleading does. One claimant reads exactly as it
+ * did before any of this existed.
+ */
+export function sideForm(parties: PartyValues[]): PartyForm {
+  if (parties.length > 1) return 'pl'
+  return parties[0] ? partyForm(parties[0]) : 'm'
+}
+
+export function sideLine(
+  parties: PartyValues[],
+  options: { honorific?: boolean; shortCivilId?: boolean } = {},
+): string {
+  const lines = parties.map((p) => partyLine(p, options)).filter((l) => l.trim())
+  if (lines.length <= 1) return lines[0] ?? ''
+  return lines.map((line, i) => `${i + 1}- ${line}`).join('\n')
+}
+
+export function sideName(parties: PartyValues[]): string {
+  return parties.map(partyName).filter(Boolean).join(' و')
+}
+
+/**
  * The party's bare name, for the places a document names them without their
  * particulars — «لصالح شركة المثال التجارية»، the exhibit list's من and ضد.
  */
@@ -198,8 +223,8 @@ export type ComposedLawsuit = {
 
 export function composeLawsuit(claim: ClaimCase): ComposedLawsuit {
   const words = vocabulary('lawsuit')
-  const cf = partyForm(claim.claimant)
-  const rf = partyForm(claim.respondent)
+  const cf = sideForm(claim.claimant)
+  const rf = sideForm(claim.respondent)
   const claimant = words.claimant(cf)
   const respondent = words.respondent(rf)
   const money = moneyPhrase(claim.amount)
@@ -254,8 +279,8 @@ export function composeLawsuit(claim: ClaimCase): ComposedLawsuit {
   return {
     subject: `دعوى مطالبة مالية بمبلغ ${moneyFigures(claim.amount)} د.ك.`,
     amountFigures: moneyFigures(claim.amount),
-    claimant: `${partyLine(claim.claimant)}. ${domicile(cf)}: ${OFFICE.domicile}`,
-    respondent: partyLine(claim.respondent),
+    claimant: `${sideLine(claim.claimant)}. ${domicile(cf)}: ${OFFICE.domicile}`,
+    respondent: sideLine(claim.respondent),
     address: claim.respondentAddress.trim(),
     agent: `وكيل ${words.claimant(cf, 'oblique')}`,
     announced: `وأعلنت${him} بالآتي:`,
@@ -296,14 +321,14 @@ export type ComposedDemand = {
 
 export function composeDemand(claim: ClaimCase): ComposedDemand {
   const words = vocabulary('demand')
-  const cf = partyForm(claim.claimant)
-  const rf = partyForm(claim.respondent)
+  const cf = sideForm(claim.claimant)
+  const rf = sideForm(claim.respondent)
   const creditor = words.claimant(cf)
   const money = moneyPhrase(claim.amount)
-  const name = partyName(claim.claimant)
+  const name = sideName(claim.claimant)
 
   return {
-    respondent: `${partyLine(claim.respondent, { shortCivilId: true })}         ${respectful(rf)}`,
+    respondent: `${sideLine(claim.respondent, { shortCivilId: true })}         ${respectful(rf)}`,
     address: `العنوان في: ${claim.respondentAddress.trim()}.`,
     subject: `الموضوع: مطالبة بمبلغ وقدره ${money} المستحق عليكم`,
     body: [
@@ -361,8 +386,8 @@ export type ComposedOrder = {
 
 export function composeOrder(claim: ClaimCase): ComposedOrder {
   const words = vocabulary('order')
-  const cf = partyForm(claim.claimant)
-  const rf = partyForm(claim.respondent)
+  const cf = sideForm(claim.claimant)
+  const rf = sideForm(claim.respondent)
   const applicant = words.claimant(cf)
   const against = words.respondent(rf)
   const level = courtLevel(claim.amount)
@@ -374,12 +399,12 @@ export function composeOrder(claim: ClaimCase): ComposedOrder {
   return {
     judge: `السيد/ قاضي ${court}      المحترم`,
     applicant:
-      `${partyLine(claim.claimant, { honorific: false })} وعنوان` +
+      `${sideLine(claim.claimant, { honorific: false })} وعنوان` +
       `${cf === 'f' ? 'ها' : cf === 'pl' ? 'هم' : 'ه'}: ` +
       `${show(claim.claimantAddress, '')} العنوان الالكتروني – تطبيق هويتي: ` +
       `${claim.claimantEmail.trim()}`,
     applicantLabel: `(${words.headingClaimant(cf)})`,
-    respondent: `${partyLine(claim.respondent)}    ${respectful(rf)}`,
+    respondent: `${sideLine(claim.respondent)}    ${respectful(rf)}`,
     respondentLabel: `(${words.headingRespondent(rf)})`,
     address: `العنوان في: ${claim.respondentAddress.trim()}.`,
     body: [
@@ -410,8 +435,8 @@ export function composeOrder(claim: ClaimCase): ComposedOrder {
         'بعد الاطلاع على هذا الطلب، وعلى المستندات المرفقة، وعملا بنص المادتين ' +
         '(166،167) من قانون المرافعات المدنية والتجارية.',
       order:
-        `نأمر: بإلزام ${against}/ ${partyLine(claim.respondent, { honorific: false })} ` +
-        `بأن ${pays(rf)} ${withLam(applicant)}/ ${partyName(claim.claimant)}، مبلغاً ` +
+        `نأمر: بإلزام ${against}/ ${sideLine(claim.respondent, { honorific: false })} ` +
+        `بأن ${pays(rf)} ${withLam(applicant)}/ ${sideName(claim.claimant)}، مبلغاً ` +
         `وقدره ${money} والمصروفات، مع شمول الأمر بالنفاذ المعجل بلا كفالة.`,
       signature: `قاضي ${court}`,
     },
@@ -438,10 +463,39 @@ export type ComposedExhibits = {
   signature: string
 }
 
+/**
+ * What proves who a respondent is: a civil card for a person, the deed and the
+ * trade licence for a company, nothing for a ministry — the state does not
+ * prove its own existence to a court.
+ */
+function respondentIdRows(
+  party: PartyValues,
+  respondent: string,
+  form: PartyForm,
+): ExhibitRow[] {
+  const row = (description: string): ExhibitRow => ({
+    date: '',
+    pages: null,
+    description,
+  })
+
+  if (party.type === 'company') {
+    const company = `الشركة ${respondent}`
+    return [
+      row(`صورة ضوئية من (عقد تأسيس ${company})`),
+      row(`صورة ضوئية من (الرخصة التجارية ${withLam(company)})`),
+    ]
+  }
+  if (party.type === 'government') return []
+
+  const card = form === 'pl' ? 'البطاقات المدنية' : 'البطاقة المدنية'
+  return [row(`صورة ضوئية من (${card} ${withLam(respondent)})`)]
+}
+
 export function composeExhibits(claim: ClaimCase): ComposedExhibits {
   const words = vocabulary('exhibits')
-  const cf = partyForm(claim.claimant)
-  const rf = partyForm(claim.respondent)
+  const cf = sideForm(claim.claimant)
+  const rf = sideForm(claim.respondent)
   const respondent = words.respondent(rf)
 
   const rows: ExhibitRow[] = claim.instruments.map((instrument) => ({
@@ -450,25 +504,11 @@ export function composeExhibits(claim: ClaimCase): ComposedExhibits {
     description: exhibitDescription(instrument),
   }))
 
-  // which document proves who the other side is depends on what they are
-  if (claim.respondent.type === 'company') {
-    // «عقد تأسيس الشركة المدعى عليها» — the exhibit list names the company
-    const company = `الشركة ${respondent}`
-    rows.push(
-      { date: '', pages: null, description: `صورة ضوئية من (عقد تأسيس ${company})` },
-      {
-        date: '',
-        pages: null,
-        description: `صورة ضوئية من (الرخصة التجارية ${withLam(company)})`,
-      },
-    )
-  } else {
-    const card = rf === 'pl' ? 'البطاقات المدنية' : 'البطاقة المدنية'
-    rows.push({
-      date: '',
-      pages: null,
-      description: `صورة ضوئية من (${card} ${withLam(respondent)})`,
-    })
+  // which document proves who the other side is depends on what they are.
+  // With several respondents the office attaches one per party, so the rows
+  // follow the parties rather than the side.
+  for (const party of claim.respondent) {
+    rows.push(...respondentIdRows(party, respondent, rf))
   }
 
   if (claim.hasContract) {
@@ -480,9 +520,9 @@ export function composeExhibits(claim: ClaimCase): ComposedExhibits {
   }
 
   return {
-    from: partyName(claim.claimant),
+    from: sideName(claim.claimant),
     fromLabel: words.claimant(cf),
-    to: partyName(claim.respondent),
+    to: sideName(claim.respondent),
     toLabel: respondent,
     rows,
     total: exhibitTotal(rows),

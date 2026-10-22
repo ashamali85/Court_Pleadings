@@ -4,10 +4,16 @@ import type { CSSProperties } from 'react'
 import { useActionState, useRef } from 'react'
 import { rejectRequest, submitReview, type ReviewState } from '@/app/admin/actions'
 import SectionCard, { Accordion } from '@/components/collapsible'
+import SectionSeriesActions from '@/components/section-series'
 import { Field, FieldGrid, useFieldValues } from '@/components/fields'
 import LoadingOverlay from '@/components/loading-overlay'
 import SubmitButton from '@/components/submit-button'
 import type { SectionDef } from '@/lib/templates/types'
+import {
+  seriesCount,
+  seriesCountFields,
+  visibleSections,
+} from '@/lib/templates/visibility'
 
 const PREVIEW_ORDER: { key: string; labelAr: string }[] = [
   { key: 'lease_date_phrase', labelAr: 'عبارة تاريخ العقد' },
@@ -65,7 +71,8 @@ export default function ReviewForm({
     rejectRequest,
     {},
   )
-  const { values, onChange } = useFieldValues(initialValues)
+  const { values, onChange, setValues } = useFieldValues(initialValues)
+  const countFields = seriesCountFields(sections)
   const errors = state.errors ?? {}
 
   // written directly to the DOM node on click, so the value is already in place
@@ -101,30 +108,52 @@ export default function ReviewForm({
         {state.error ? <div className="alert error">{state.error}</div> : null}
         {banner}
 
-        {sections.map((section) => {
-          const hasError = section.fields.some((f) => Boolean(errors[f.name]))
-          return (
-            <SectionCard
-              key={section.key}
-              id={section.key}
-              title={section.titleAr}
-              hasError={hasError}
-              errorLabel={labels.needsFix}
-            >
-              <FieldGrid>
-                {section.fields.map((field) => (
-                  <Field
-                    key={field.name}
-                    field={field}
-                    values={values}
-                    errors={errors}
-                    onChange={onChange}
-                  />
-                ))}
-              </FieldGrid>
-            </SectionCard>
-          )
-        })}
+        {/* the lawyer sees the office's own fields too, and the same party
+            sections the client filled — added or removed the same way */}
+        {countFields.map((field) => (
+          <input
+            key={field}
+            type="hidden"
+            name={field}
+            value={seriesCount(field, values)}
+          />
+        ))}
+
+        {visibleSections(sections, values, { includeAdminOnly: true }).map(
+          (section) => {
+            const hasError = section.fields.some((f) => Boolean(errors[f.name]))
+            return (
+              <SectionCard
+                key={section.key}
+                id={section.key}
+                title={section.titleAr}
+                hasError={hasError}
+                errorLabel={labels.needsFix}
+                actionsSlot={
+                  section.repeat ? (
+                    <SectionSeriesActions
+                      section={section}
+                      values={values}
+                      setValues={setValues}
+                    />
+                  ) : null
+                }
+              >
+                <FieldGrid>
+                  {section.fields.map((field) => (
+                    <Field
+                      key={field.name}
+                      field={field}
+                      values={values}
+                      errors={errors}
+                      onChange={onChange}
+                    />
+                  ))}
+                </FieldGrid>
+              </SectionCard>
+            )
+          },
+        )}
 
         <SectionCard id="computed" title={labels.computedTitle}>
           <p className="muted">{labels.computedHint}</p>

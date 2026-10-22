@@ -342,6 +342,74 @@ main {
   padding: 0;
 }
 
+/* the header strip: the toggle takes the width, the series buttons sit beside
+   it — a button cannot live inside a button */
+.section-head-row {
+  display: flex;
+  align-items: stretch;
+}
+
+.section-head-row .section-head {
+  flex: 1;
+  min-width: 0;
+}
+
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline-end: var(--space-5);
+}
+
+.section-add,
+.section-remove {
+  width: var(--space-6);
+  height: var(--space-6);
+  padding: 0;
+  border-radius: var(--radius-circle);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font: inherit;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.section-add {
+  color: var(--brand);
+}
+
+.section-add:hover {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--ink-on-brand);
+}
+
+.section-remove {
+  color: var(--danger);
+}
+
+.section-remove:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--white);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section-add,
+  .section-remove {
+    transition: none;
+  }
+}
+
 .section-head {
   display: flex;
   align-items: center;

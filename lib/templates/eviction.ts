@@ -4,12 +4,20 @@ import {
   COMPANY_FORM_LABEL,
   DEFENDANT,
   PARTY_SIDES,
+  partyAt,
+  sideDefaults,
+  partyCountField,
+  partyCountShape,
+  partyKeys,
+  partyPrefix,
+  partySections,
+  MAX_PARTIES,
   PLAINTIFF,
-  partySection,
   partyShape,
   personLine,
   readParty,
-  validateParty,
+  readSide,
+  validateSide,
   type PartyValues,
 } from '@/lib/templates/party'
 import { amountToArabicWords, formatAmount } from '@/lib/tafqeet'
@@ -110,44 +118,17 @@ export const evictionSchema = z
        runtime would leave the schema with an index signature instead of named
        fields, and every `values.plaintiff_civil_id` in this file would lose
        its type. The declarations are duplicated; none of the behaviour is. */
-    plaintiff_type: partyShape.type,
-    plaintiff_name: partyShape.name,
-    plaintiff_full_name: partyShape.full_name,
-    plaintiff_gender: partyShape.gender,
-    plaintiff_civil_id: partyShape.civil_id,
-    plaintiff_nationality: partyShape.nationality,
-    plaintiff_deceased_name: partyShape.deceased_name,
-    plaintiff_heirs: partyShape.heirs,
-    plaintiff_company_name: partyShape.company_name,
-    plaintiff_company_form: partyShape.company_form,
-    plaintiff_company_register: partyShape.company_register,
-    plaintiff_company_civil_no: partyShape.company_civil_no,
-    plaintiff_establishment_name: partyShape.establishment_name,
-    plaintiff_owner_name: partyShape.owner_name,
-    plaintiff_owner_civil_id: partyShape.owner_civil_id,
-    plaintiff_owner_nationality: partyShape.owner_nationality,
-    plaintiff_licence_register: partyShape.licence_register,
-    plaintiff_licence_civil_no: partyShape.licence_civil_no,
+    ...partyKeys('plaintiff'),
+    ...partyKeys('plaintiff2'),
+    ...partyKeys('plaintiff3'),
+    ...partyKeys('plaintiff4'),
+    plaintiff_count: partyCountShape,
 
-    defendant_type: partyShape.type,
-    defendant_name: partyShape.name,
-    defendant_full_name: partyShape.full_name,
-    defendant_gender: partyShape.gender,
-    defendant_civil_id: partyShape.civil_id,
-    defendant_nationality: partyShape.nationality,
-    defendant_deceased_name: partyShape.deceased_name,
-    defendant_heirs: partyShape.heirs,
-    defendant_company_name: partyShape.company_name,
-    defendant_company_form: partyShape.company_form,
-    defendant_company_register: partyShape.company_register,
-    defendant_company_civil_no: partyShape.company_civil_no,
-    defendant_government_name: partyShape.government_name,
-    defendant_establishment_name: partyShape.establishment_name,
-    defendant_owner_name: partyShape.owner_name,
-    defendant_owner_civil_id: partyShape.owner_civil_id,
-    defendant_owner_nationality: partyShape.owner_nationality,
-    defendant_licence_register: partyShape.licence_register,
-    defendant_licence_civil_no: partyShape.licence_civil_no,
+    ...partyKeys('defendant'),
+    ...partyKeys('defendant2'),
+    ...partyKeys('defendant3'),
+    ...partyKeys('defendant4'),
+    defendant_count: partyCountShape,
 
     defendant_address: z.string().trim().min(3, 'عنوان المدعى عليه مطلوب').max(2000),
     premises_same_as_defendant: z.boolean(),
@@ -176,15 +157,7 @@ export const evictionSchema = z
 
     // both sides, same rules, one definition
     for (const side of PARTY_SIDES) {
-      const party = readParty(v, side.prefix)
-      // the form offers each side only its own shapes; a request that arrives
-      // with another one was not filled in on these screens
-      need(
-        party.type === undefined || side.types.includes(party.type),
-        [`${side.prefix}_type`],
-        `صفة ${side.labelAr} غير مقبولة`,
-      )
-      validateParty(party, side.prefix, need, side.labelAr)
+      validateSide(v, side, need)
     }
 
     if (v.arrears_to_month < v.arrears_from_month) {
@@ -216,44 +189,16 @@ export type EvictionValues = z.infer<typeof evictionSchema>
    would not satisfy the named type. Kuwait is pre-selected because most
    parties in this office's cases are Kuwaiti. */
 export const evictionDefaults: EvictionValues = {
-  plaintiff_type: 'natural',
-  plaintiff_name: '',
-  plaintiff_full_name: '',
-  plaintiff_gender: '',
-  plaintiff_civil_id: '',
-  plaintiff_nationality: 'KW',
-  plaintiff_deceased_name: '',
-  plaintiff_heirs: [{ name: '', civil_id: '', nationality: 'KW' }],
-  plaintiff_company_name: '',
-  plaintiff_company_form: '',
-  plaintiff_company_register: '',
-  plaintiff_company_civil_no: '',
-  plaintiff_establishment_name: '',
-  plaintiff_owner_name: '',
-  plaintiff_owner_civil_id: '',
-  plaintiff_owner_nationality: 'KW',
-  plaintiff_licence_register: '',
-  plaintiff_licence_civil_no: '',
-
-  defendant_type: 'natural',
-  defendant_name: '',
-  defendant_full_name: '',
-  defendant_gender: '',
-  defendant_civil_id: '',
-  defendant_nationality: 'KW',
-  defendant_deceased_name: '',
-  defendant_heirs: [{ name: '', civil_id: '', nationality: 'KW' }],
-  defendant_company_name: '',
-  defendant_company_form: '',
-  defendant_company_register: '',
-  defendant_company_civil_no: '',
-  defendant_government_name: '',
-  defendant_establishment_name: '',
-  defendant_owner_name: '',
-  defendant_owner_civil_id: '',
-  defendant_owner_nationality: 'KW',
-  defendant_licence_register: '',
-  defendant_licence_civil_no: '',
+  // every party of both sides, blank, with the first one started on the
+  // commonest shape; only the first is shown until the client adds another
+  ...sideDefaults(PLAINTIFF, {
+    plaintiff_type: 'natural',
+    plaintiff_nationality: 'KW',
+  }),
+  ...sideDefaults(DEFENDANT, {
+    defendant_type: 'natural',
+    defendant_nationality: 'KW',
+  }),
   defendant_address: '',
   premises_same_as_defendant: true,
   premises_address: '',
@@ -399,11 +344,21 @@ const fields: Record<string, FieldDef> = {
 }
 
 /** Both sides compose the same way; only which prefix is read differs. */
-export const plaintiffLine = (values: EvictionValues) =>
-  partyLine(readParty(values, PLAINTIFF.prefix))
+/**
+ * A whole side as the petition writes it. One party is written plainly; two or
+ * more are numbered, because a pleading that lists «1- … 2- …» is how the
+ * court reads several claimants.
+ */
+function sideLine(values: EvictionValues, side: typeof PLAINTIFF | typeof DEFENDANT) {
+  const parties = readSide(values as unknown as Record<string, unknown>, side)
+  const lines = parties.map(partyLine).filter((line) => line.trim())
+  if (lines.length <= 1) return lines[0] ?? ''
+  return lines.map((line, i) => `${i + 1}- ${line}`).join('\n')
+}
 
-export const defendantLine = (values: EvictionValues) =>
-  partyLine(readParty(values, DEFENDANT.prefix))
+export const plaintiffLine = (values: EvictionValues) => sideLine(values, PLAINTIFF)
+
+export const defendantLine = (values: EvictionValues) => sideLine(values, DEFENDANT)
 
 function computeMonths(from: number, to: number) {
   return to - from + 1
@@ -520,8 +475,8 @@ export const evictionTemplate: TemplateDef<EvictionValues> = {
   sections: [
     // the two party sections are the shared ones, untouched; the service
     // address is a fact about this case, not about the party
-    partySection(PLAINTIFF),
-    partySection(DEFENDANT, [fields.defendant_address]),
+    ...partySections(PLAINTIFF),
+    ...partySections(DEFENDANT, [fields.defendant_address]),
     {
       key: 'premises',
       titleAr: 'العين المؤجرة وعقد الإيجار',

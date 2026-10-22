@@ -79,6 +79,20 @@ export type SectionDef = {
   key: string
   titleAr: string
   fields: FieldDef[]
+  /**
+   * This section is one of a repeatable series — a second claimant, a third.
+   * `countField` holds how many of the series exist; sections beyond that
+   * count are not rendered and submit nothing. The last rendered one carries
+   * the add button, and every one past the first can be removed.
+   */
+  repeat?: {
+    countField: string
+    /** 1-based position in the series */
+    index: number
+    max: number
+    addLabelAr: string
+    removeLabelAr: string
+  }
 }
 
 /** Values that go into the .docx, keyed by the placeholder name in the template. */

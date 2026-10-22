@@ -1,6 +1,7 @@
 import { toLatinDigits } from '@/lib/numerals'
 import { claimTemplate } from '@/lib/templates/claim'
 import { evictionTemplate } from '@/lib/templates/eviction'
+import { seriesCountFields } from '@/lib/templates/visibility'
 import type { FieldDef, TemplateDef } from '@/lib/templates/types'
 
 // Adding a second case type is: write the .docx template, write its TemplateDef,
@@ -24,6 +25,14 @@ export function formDataToValues(
   formData: FormData,
 ): Record<string, unknown> {
   const values: Record<string, unknown> = {}
+
+  // how many parties each side has: not a question the client is asked, but a
+  // number the form carries, and without it the extra parties are not read
+  for (const field of seriesCountFields(template.sections)) {
+    const raw = formData.get(field)
+    if (raw !== null) values[field] = toLatinDigits(raw.toString().trim())
+  }
+
   for (const field of allFields(template)) {
     if (field.type === 'boolean') {
       const raw = formData.get(field.name)

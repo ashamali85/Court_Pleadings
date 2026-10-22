@@ -2,6 +2,7 @@ import 'server-only'
 import { cache } from 'react'
 import db from '@/lib/db'
 import { contentDefaults, type ContentMap } from '@/lib/content/defaults'
+import { baseFieldName } from '@/lib/templates/party'
 import type { FieldDef, SectionDef, TemplateDef } from '@/lib/templates/types'
 
 export { CONTENT_GROUPS, contentDefaults } from '@/lib/content/defaults'
@@ -55,6 +56,24 @@ function applyToField(field: FieldDef, base: string, content: ContentMap): Field
   }
 }
 
+/**
+ * «المدعي» for the first, «المدعي الثاني» for the second — the numbered copies
+ * follow whatever the lawyer words the first one as.
+ */
+function sectionTitle(
+  template: TemplateDef<never>,
+  section: SectionDef,
+  content: ContentMap,
+): string {
+  const repeat = section.repeat
+  const base = section.key.replace(/\d+$/, '')
+  const worded = content[`section.${template.key}.${base}.title`]
+  if (!worded) return section.titleAr
+  if (!repeat || repeat.index === 1) return worded
+  // keep whatever ordinal the template put on it
+  return section.titleAr.replace(/^\S+/, worded)
+}
+
 /** Template sections with the admin's label/hint/placeholder wording applied. */
 export function applyContentToSections(
   template: TemplateDef<never>,
@@ -62,9 +81,15 @@ export function applyContentToSections(
 ): SectionDef[] {
   return template.sections.map((section) => ({
     ...section,
-    titleAr: content[`section.${template.key}.${section.key}.title`] ?? section.titleAr,
+    titleAr: sectionTitle(template, section, content),
     fields: section.fields.map((field) =>
-      applyToField(field, `field.${template.key}.${field.name}`, content),
+      // a numbered party reads its wording from the first one — see
+      // contentDefaults; `baseFieldName` is what makes them share it
+      applyToField(
+        field,
+        `field.${template.key}.${baseFieldName(field.name)}`,
+        content,
+      ),
     ),
   }))
 }

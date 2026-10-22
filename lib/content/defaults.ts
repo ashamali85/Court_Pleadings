@@ -1,4 +1,5 @@
 import { templates } from '@/lib/templates'
+import { baseFieldName } from '@/lib/templates/party'
 import type { FieldDef } from '@/lib/templates/types'
 
 /**
@@ -156,7 +157,11 @@ export function contentDefaults(): Record<string, string> {
     out[`template.${template.key}.description`] = template.descriptionAr
 
     for (const section of template.sections) {
-      out[`section.${template.key}.${section.key}.title`] = section.titleAr
+      // likewise a section's own title: «المدعي» is worded once, and the
+      // numbered copies take their wording from it
+      if (!section.repeat || section.repeat.index === 1) {
+        out[`section.${template.key}.${section.key}.title`] = section.titleAr
+      }
 
       // a repeatable group contributes its own label plus one per row field,
       // keyed field.<template>.<group>.<row field>.label
@@ -176,7 +181,10 @@ export function contentDefaults(): Record<string, string> {
       }
 
       for (const field of section.fields) {
-        walk(field, `field.${template.key}.${field.name}`)
+        // every party of a side asks the same questions, so they share one set
+        // of labels; without this the lawyer would be shown four copies of
+        // each and would have to edit every one
+        walk(field, `field.${template.key}.${baseFieldName(field.name)}`)
       }
     }
 

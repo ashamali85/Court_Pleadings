@@ -83,8 +83,8 @@ function party(over: Partial<PartyValues>): PartyValues {
 
 function blankClaim(): ClaimCase {
   return {
-    claimant: party({}),
-    respondent: party({}),
+    claimant: [party({})],
+    respondent: [party({})],
     respondentAddress: '',
     amount: 0,
     relationship: 'commercial',
@@ -359,20 +359,24 @@ console.log('\n--- صحيفة الدعوى, against examples/build3_invoice.json
 
 const invoiceCase: ClaimCase = {
   ...blankClaim(),
-  claimant: party({
-    type: 'company',
-    company_name: 'شركة المثال التجارية',
-    company_form: 'single_person',
-    company_civil_no: '0000000',
-    company_register: '000000',
-  }),
-  respondent: party({
-    type: 'natural',
-    full_name: 'فلان عبد الله الفلاني',
-    gender: 'male',
-    nationality: 'KW',
-    civil_id: '000000000000',
-  }),
+  claimant: [
+    party({
+      type: 'company',
+      company_name: 'شركة المثال التجارية',
+      company_form: 'single_person',
+      company_civil_no: '0000000',
+      company_register: '000000',
+    }),
+  ],
+  respondent: [
+    party({
+      type: 'natural',
+      full_name: 'فلان عبد الله الفلاني',
+      gender: 'male',
+      nationality: 'KW',
+      civil_id: '000000000000',
+    }),
+  ],
   respondentAddress:
     'منطقة المثال – قطعة (1) – شارع (10) – منزل رقم (5) – الدور الأرضي',
   amount: 882.511,
@@ -561,7 +565,7 @@ check(
   'a company respondent needs its deed and its licence',
   composeExhibits({
     ...chequeCase,
-    respondent: party({ type: 'company', company_name: 'شركة المدين' }),
+    respondent: [party({ type: 'company', company_name: 'شركة المدين' })],
   })
     .rows.map((r) => r.description)
     .join(' | '),
@@ -580,13 +584,15 @@ check(
 console.log('\n--- a woman owing a company, to see every word move')
 const feminine = composeLawsuit({
   ...invoiceCase,
-  respondent: party({
-    type: 'natural',
-    full_name: 'وسمية سعد فهاد العجمي',
-    gender: 'female',
-    nationality: 'KW',
-    civil_id: '280110601156',
-  }),
+  respondent: [
+    party({
+      type: 'natural',
+      full_name: 'وسمية سعد فهاد العجمي',
+      gender: 'female',
+      nationality: 'KW',
+      civil_id: '280110601156',
+    }),
+  ],
 })
 check(
   'the respondent line agrees',
@@ -855,6 +861,54 @@ console.log('\n--- the request form')
     { lawsuit_requests: 'الطلبات كما كتبها المحامي' },
   ) as Record<string, string>
   check('an override wins', overridden.lawsuit_requests, 'الطلبات كما كتبها المحامي')
+}
+
+// ---------- several parties on one side ----------
+console.log('\n--- أكثر من مدعٍ')
+{
+  const two = {
+    ...invoiceCase,
+    respondent: [
+      invoiceCase.respondent[0],
+      party({
+        type: 'company',
+        company_name: 'شركة المدين',
+        company_form: 'llc',
+        company_register: '654321',
+        company_civil_no: '100111222',
+      }),
+    ],
+  }
+
+  const lawsuit = composeLawsuit(two)
+  check(
+    'both respondents are written, numbered',
+    lawsuit.respondent,
+    '1- السيد/ فلان عبد الله الفلاني – كويتي الجنسية – بطاقة مدنية رقم (000000000000)\n' +
+      '2- شركة المدين ذات مسؤولية محدودة – الرقم المدني للجهة (100111222) – ' +
+      'رقم السجل التجاري (654321)',
+  )
+  check('and the side reads as plural', lawsuit.announced, 'وأعلنتهم بالآتي:')
+  check(
+    'بأن يؤدوا',
+    lawsuit.requests[1].includes('بإلزام المعلن إليهم بأن يؤدوا'),
+    true,
+  )
+  check(
+    'the exhibit list names both',
+    composeExhibits(two).to,
+    'فلان عبد الله الفلاني وشركة المدين ذات مسؤولية محدودة',
+  )
+  check(
+    'and proves each of them in its own way',
+    composeExhibits(two)
+      .rows.map((r) => r.description)
+      .join(' | '),
+    'صورة ضوئية من (الفاتورة رقم 12345) | ' +
+      'صورة ضوئية من (البطاقات المدنية للمدعى عليهم) | ' +
+      'صورة ضوئية من (عقد تأسيس الشركة المدعى عليهم) | ' +
+      'صورة ضوئية من (الرخصة التجارية للشركة المدعى عليهم)',
+  )
 }
 
 console.log(failures ? `\n${failures} FAILED` : '\nAll checks passed.')

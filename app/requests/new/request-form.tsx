@@ -4,10 +4,16 @@ import { useActionState } from 'react'
 import type { RequestFormState } from '@/app/requests/actions'
 import Attachments, { type AttachedFile } from '@/components/attachments'
 import SectionCard, { Accordion } from '@/components/collapsible'
+import SectionSeriesActions from '@/components/section-series'
 import { Field, FieldGrid, useFieldValues } from '@/components/fields'
 import LoadingOverlay from '@/components/loading-overlay'
 import SubmitButton from '@/components/submit-button'
 import type { SectionDef } from '@/lib/templates/types'
+import {
+  seriesCount,
+  seriesCountFields,
+  visibleSections,
+} from '@/lib/templates/visibility'
 
 export type RequestFormAction = (
   state: RequestFormState,
@@ -44,25 +50,18 @@ export default function RequestForm({
   }
 }) {
   const [state, formAction] = useActionState<RequestFormState, FormData>(action, {})
-  const { values, onChange } = useFieldValues({
+  const { values, onChange, setValues } = useFieldValues({
     ...defaults,
     ...(state.values ?? {}),
   })
   const errors = state.errors ?? {}
 
   /*
-   * Some answers are the office's, not the client's — the court a payment
-   * order was filed at, the number it was refused under. The client cannot
-   * know them, so the fields exist on the template but only the lawyer's
-   * review screen renders them, and a section left with nothing in it is
-   * dropped rather than shown empty.
+   * Which sections the client sees: without the office's own answers, without
+   * the ones left empty by that, and without the parties they have not added.
    */
-  const clientSections = sections
-    .map((section) => ({
-      ...section,
-      fields: section.fields.filter((field) => !field.adminOnly),
-    }))
-    .filter((section) => section.fields.length > 0)
+  const clientSections = visibleSections(sections, values)
+  const countFields = seriesCountFields(sections)
 
   return (
     <form action={formAction}>
@@ -73,6 +72,17 @@ export default function RequestForm({
 
         {state.error ? <div className="alert error">{state.error}</div> : null}
 
+        {/* how many parties each side has; the sections above are drawn from
+            these, and the server reads them back the same way */}
+        {countFields.map((field) => (
+          <input
+            key={field}
+            type="hidden"
+            name={field}
+            value={seriesCount(field, values)}
+          />
+        ))}
+
         {clientSections.map((section) => {
           const hasError = section.fields.some((f) => Boolean(errors[f.name]))
           return (
@@ -82,6 +92,15 @@ export default function RequestForm({
               title={section.titleAr}
               hasError={hasError}
               errorLabel={labels.needsFix}
+              actionsSlot={
+                section.repeat ? (
+                  <SectionSeriesActions
+                    section={section}
+                    values={values}
+                    setValues={setValues}
+                  />
+                ) : null
+              }
             >
               <FieldGrid>
                 {section.fields.map((field) => (

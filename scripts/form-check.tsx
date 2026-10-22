@@ -21,11 +21,14 @@ import {
   PARTY_TYPES,
   PLAINTIFF,
   PRIVATE_PARTY_TYPES,
+  MAX_PARTIES,
   partySection,
+  type PartySide,
 } from '@/lib/templates/party'
 import { evictionDefaults, evictionTemplate } from '@/lib/templates/eviction'
 import { allFields } from '@/lib/templates'
 import type { FieldDef } from '@/lib/templates/types'
+import { visibleSections } from '@/lib/templates/visibility'
 
 let failures = 0
 
@@ -124,23 +127,35 @@ console.log('\n--- مطالبة مالية: what the client is actually shown')
     return field
   }
 
-  // what RequestForm does: drop the office's fields, then drop empty sections
-  const clientSections = claimTemplate.sections
-    .map((s) => ({ ...s, fields: s.fields.filter((f) => !f.adminOnly) }))
-    .filter((s) => s.fields.length > 0)
+  // exactly what RequestForm draws: no office fields, no empty sections, and
+  // only the parties that have been added
+  const defaults = claimTemplate.defaults
+  const clientSections = visibleSections(claimTemplate.sections, defaults)
+  const adminSections = visibleSections(claimTemplate.sections, defaults, {
+    includeAdminOnly: true,
+  })
 
   check(
     'the office section disappears from the client form',
     clientSections.some((s) => s.key === 'office'),
     false,
   )
-  check('four sections are left', clientSections.length, 4)
+  check(
+    'four sections are left: two parties and two of its own',
+    clientSections.map((s) => s.key).join(','),
+    'plaintiff,defendant,debt,demands',
+  )
   check(
     'and none of them carries an office field',
     clientSections.flatMap((s) => s.fields).some((f) => f.adminOnly),
     false,
   )
-  check('while the lawyer still gets all five', claimTemplate.sections.length, 5)
+  check('while the lawyer also gets the office one', adminSections.length, 5)
+  check(
+    'the second claimant is there but not drawn until it is added',
+    claimTemplate.sections.some((s) => s.key === 'plaintiff2'),
+    true,
+  )
 
   // the party questions are the shared ones now, checked once for every
   // template further down; what is checked here is this case type's own
@@ -344,8 +359,7 @@ console.log('\n--- جهة حكومية')
 console.log('\n--- المدعي والمدعى عليه are the same in every pleading type')
 {
   /** what a section must contain, exactly, before anything case-specific */
-  const canonical = (side: typeof PLAINTIFF | typeof DEFENDANT) =>
-    partySection(side).fields
+  const canonical = (side: PartySide) => partySection(side).fields
 
   for (const template of templates) {
     for (const side of PARTY_SIDES) {
@@ -411,6 +425,108 @@ console.log('\n--- المدعي والمدعى عليه are the same in every pl
       PARTY_TYPES.join(','),
     )
   }
+}
+
+// ---------- adding a whole party section ----------
+//
+// The + beside المدعي adds a second complete party — its own صفة, its own
+// fields, its own rules — rather than a row inside the first one. The sections
+// all exist in the template; the count decides how many are drawn.
+console.log('\n--- إضافة المدعي / المدعى عليه')
+for (const template of templates) {
+  const base = template.defaults
+
+  const drawn = (values: Record<string, unknown>) =>
+    visibleSections(template.sections, values).map((s) => s.key)
+
+  check(
+    `${template.key}: one of each side to begin with`,
+    drawn(base)
+      .filter((k) => k.startsWith('plaintiff') || k.startsWith('defendant'))
+      .join(','),
+    'plaintiff,defendant',
+  )
+  check(
+    `${template.key}: raising the count draws the second claimant`,
+    drawn({ ...base, plaintiff_count: 2 }).includes('plaintiff2'),
+    true,
+  )
+  check(
+    `${template.key}: and not the third`,
+    drawn({ ...base, plaintiff_count: 2 }).includes('plaintiff3'),
+    false,
+  )
+  check(
+    `${template.key}: the other side is unaffected`,
+    drawn({ ...base, plaintiff_count: 3 })
+      .filter((k) => k.startsWith('defendant'))
+      .join(','),
+    'defendant',
+  )
+  check(
+    `${template.key}: four is the ceiling`,
+    drawn({ ...base, plaintiff_count: 99 }).filter((k) => k.startsWith('plaintiff'))
+      .length,
+    MAX_PARTIES,
+  )
+
+  const sections = visibleSections(template.sections, { ...base, plaintiff_count: 2 })
+  const first = sections.find((s) => s.key === 'plaintiff')!
+  const second = sections.find((s) => s.key === 'plaintiff2')!
+
+  check(`${template.key}: the first cannot be removed`, first.canRemove, false)
+  check(`${template.key}: the second can`, second.canRemove, true)
+  check(`${template.key}: only the last offers +`, first.canAdd, false)
+  check(`${template.key}: which is the second`, second.canAdd, true)
+  check(
+    `${template.key}: and it is numbered, not renamed`,
+    second.titleAr,
+    'المدعي الثاني',
+  )
+
+  // the second party is the same party, under its own prefix
+  check(
+    `${template.key}: the second asks exactly what the first asks`,
+    second.fields.map((f) => f.name.replace(/^plaintiff2_/, '')).join(','),
+    first.fields
+      .filter((f) => f.name.startsWith('plaintiff_'))
+      .map((f) => f.name.replace(/^plaintiff_/, ''))
+      .join(','),
+  )
+  check(
+    `${template.key}: including its own heirs list`,
+    second.fields.some((f) => f.name === 'plaintiff2_heirs' && f.type === 'rows'),
+    true,
+  )
+  check(
+    `${template.key}: and its own صفة, government still withheld`,
+    second.fields
+      .find((f) => f.name === 'plaintiff2_type')
+      ?.options?.some((o) => o.value === 'government'),
+    false,
+  )
+  check(
+    `${template.key}: while the second respondent may be a ministry`,
+    visibleSections(template.sections, { ...base, defendant_count: 2 })
+      .find((s) => s.key === 'defendant2')
+      ?.fields.find((f) => f.name === 'defendant2_type')
+      ?.options?.some((o) => o.value === 'government'),
+    true,
+  )
+  check(
+    `${template.key}: the service address is asked once, not per party`,
+    visibleSections(template.sections, { ...base, defendant_count: 2 })
+      .find((s) => s.key === 'defendant2')
+      ?.fields.some((f) => f.name.endsWith('_address')),
+    false,
+  )
+
+  // one set of labels for all four, so the content screen is not flooded
+  check(
+    `${template.key}: the copies share the first one's wording`,
+    second.fields.find((f) => f.name === 'plaintiff2_full_name')?.labelAr,
+    first.fields.find((f) => f.name === 'plaintiff_full_name')?.labelAr,
+  )
 }
 
 console.log(failures ? `\n${failures} FAILED` : '\nAll checks passed.')

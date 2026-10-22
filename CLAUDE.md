@@ -36,6 +36,15 @@ a new case type genuinely needs a different party question, the question
 belongs in `party.ts` for everyone, or it is a fact about the case rather than
 about the party and belongs in the case's own section.
 
+A side can hold up to `MAX_PARTIES` parties. The sections for all of them
+exist in the template; `<side>_count` says how many are drawn, the + on the
+last one raises it, and the × removes one and moves the ones after it up. Each
+party is complete under its own prefix (`plaintiff`, `plaintiff2`…), so a
+second claimant has its own صفة and its own heirs list. `partyKeys()` and
+`sideDefaults()` generate the schema keys and the defaults for all of them; the
+numbered copies share the first one's wording on the content screen, via
+`baseFieldName()`.
+
 The one difference between the sides, everywhere: **جهة حكومية is offered to
 المدعى عليه only** (`PRIVATE_PARTY_TYPES` versus `PARTY_TYPES`). A government
 body can be sued through this portal; it does not sue through it.
