@@ -53,6 +53,7 @@ export const evictionSchema = z
     plaintiff_company_form: partyShape.company_form,
     plaintiff_company_register: partyShape.company_register,
     plaintiff_company_civil_no: partyShape.company_civil_no,
+    plaintiff_government_name: partyShape.government_name,
     plaintiff_establishment_name: partyShape.establishment_name,
     plaintiff_owner_name: partyShape.owner_name,
     plaintiff_owner_civil_id: partyShape.owner_civil_id,
@@ -71,6 +72,7 @@ export const evictionSchema = z
     defendant_company_form: partyShape.company_form,
     defendant_company_register: partyShape.company_register,
     defendant_company_civil_no: partyShape.company_civil_no,
+    defendant_government_name: partyShape.government_name,
     defendant_establishment_name: partyShape.establishment_name,
     defendant_owner_name: partyShape.owner_name,
     defendant_owner_civil_id: partyShape.owner_civil_id,
@@ -148,6 +150,7 @@ export const evictionDefaults: EvictionValues = {
   plaintiff_company_form: '',
   plaintiff_company_register: '',
   plaintiff_company_civil_no: '',
+  plaintiff_government_name: '',
   plaintiff_establishment_name: '',
   plaintiff_owner_name: '',
   plaintiff_owner_civil_id: '',
@@ -166,6 +169,7 @@ export const evictionDefaults: EvictionValues = {
   defendant_company_form: '',
   defendant_company_register: '',
   defendant_company_civil_no: '',
+  defendant_government_name: '',
   defendant_establishment_name: '',
   defendant_owner_name: '',
   defendant_owner_civil_id: '',
@@ -193,6 +197,14 @@ const fields: Record<string, FieldDef> = {
   defendant_address: {
     name: 'defendant_address',
     labelAr: 'عنوان المدعى عليه',
+    // a ministry is addressed by its own name, not as «المدعى عليه»
+    labelWhen: [
+      {
+        field: 'defendant_type',
+        equals: ['government'],
+        labelAr: 'عنوان الجهة الحكومية',
+      },
+    ],
     hintAr: 'المنطقة، القطعة، الشارع، القسيمة، رقم العين، الدور، والرقم الآلي.',
     type: 'textarea',
     rows: 4,

@@ -50,6 +50,11 @@ export type FieldDef = {
   /** show this field only while another field holds one of these values.
       Inside a `rows` group the named field is the one in the same row. */
   showWhen?: { field: string; equals: string[] }
+  /** A label that replaces `labelAr` while another field holds one of these
+      values — «عنوان المدعى عليه» becomes «عنوان الجهة الحكومية» once the
+      other side is a ministry. One field, one stored value, two wordings; the
+      first match wins. Each alternative is editable on the content screen. */
+  labelWhen?: { field: string; equals: string[]; labelAr: string }[]
   /** an office fact the client cannot know — hidden on the request form,
       shown on the lawyer's review screen. See the financial claim's court
       name and payment-order number. */

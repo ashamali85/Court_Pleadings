@@ -162,6 +162,12 @@ export function contentDefaults(): Record<string, string> {
       // keyed field.<template>.<group>.<row field>.label
       const walk = (field: FieldDef, prefix: string) => {
         out[`${prefix}.label`] = field.labelAr
+        // an alternative wording that depends on another answer is editable
+        // too — «عنوان الجهة الحكومية» is as much the lawyer's word as the
+        // label it replaces
+        field.labelWhen?.forEach((alt, i) => {
+          out[`${prefix}.label.when${i + 1}`] = alt.labelAr
+        })
         if (field.hintAr) out[`${prefix}.hint`] = field.hintAr
         if (field.placeholder) out[`${prefix}.placeholder`] = field.placeholder
         for (const sub of field.rowFields ?? []) {

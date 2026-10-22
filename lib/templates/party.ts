@@ -11,7 +11,13 @@ import { z } from 'zod'
 import { nationalityLabel, NATIONALITIES } from '@/lib/nationalities'
 import type { FieldDef } from '@/lib/templates/types'
 
-export const PARTY_TYPES = ['natural', 'heirs', 'company', 'licence'] as const
+export const PARTY_TYPES = [
+  'natural',
+  'heirs',
+  'company',
+  'licence',
+  'government',
+] as const
 export type PartyType = (typeof PARTY_TYPES)[number]
 
 /** Kuwaiti civil ID: twelve digits, no separators. */
@@ -73,6 +79,9 @@ export const partyShape = {
   company_register: z.string().trim().max(40).default(''),
   company_civil_no: z.string().trim().max(20).default(''),
 
+  /** جهة حكومية: وزارة، هيئة، بلدية — لا رقم مدني لها ولا سجل تجاري */
+  government_name: z.string().trim().max(300).default(''),
+
   establishment_name: z.string().trim().max(300).default(''),
   owner_name: z.string().trim().max(300).default(''),
   owner_civil_id: z.string().trim().max(20).default(''),
@@ -94,6 +103,7 @@ export type PartyValues = {
   company_form: string
   company_register: string
   company_civil_no: string
+  government_name: string
   establishment_name: string
   owner_name: string
   owner_civil_id: string
@@ -112,6 +122,7 @@ const TEXT_KEYS = [
   'company_form',
   'company_register',
   'company_civil_no',
+  'government_name',
   'establishment_name',
   'owner_name',
   'owner_civil_id',
@@ -175,6 +186,11 @@ export function partyLine(party: PartyValues): string {
       ]
         .filter(Boolean)
         .join(' – ')
+
+    case 'government':
+      // a ministry or authority is named and nothing else: it carries no civil
+      // number and no commercial register to cite
+      return party.government_name.trim()
 
     case 'licence': {
       /*
@@ -265,6 +281,14 @@ export function validateParty(
       )
       break
 
+    case 'government':
+      need(
+        filled(party.government_name, 2),
+        at('government_name'),
+        'اسم الجهة الحكومية مطلوب',
+      )
+      break
+
     case 'licence':
       need(
         filled(party.establishment_name, 2),
@@ -324,6 +348,7 @@ export function partyFields(prefix: string, labelAr: string): FieldDef[] {
         { value: 'heirs', labelAr: 'ورثة' },
         { value: 'company', labelAr: 'شركة' },
         { value: 'licence', labelAr: 'رخصة فردية' },
+        { value: 'government', labelAr: 'جهة حكومية' },
       ],
     },
 
@@ -432,6 +457,18 @@ export function partyFields(prefix: string, labelAr: string): FieldDef[] {
           options: nationalityOptions,
         },
       ],
+    },
+
+    /* --- جهة حكومية --- */
+    {
+      name: n('government_name'),
+      width: 'org',
+      labelAr: 'اسم الجهة الحكومية',
+      hintAr: 'اسم الوزارة أو الهيئة أو البلدية كما هو في مراسلاتها الرسمية.',
+      type: 'text',
+      required: true,
+      showWhen: only('government'),
+      placeholder: 'وزارة ...',
     },
 
     /* --- شركة --- */

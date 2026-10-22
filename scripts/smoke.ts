@@ -179,6 +179,34 @@ for (const side of [
   )
 
   check(
+    'جهة حكومية',
+    lineFor({
+      [f('type')]: 'government',
+      [f('government_name')]: 'وزارة الأشغال العامة',
+    }),
+    'وزارة الأشغال العامة',
+  )
+
+  check(
+    'a ministry must be named',
+    errorPath({ [f('type')]: 'government', [f('government_name')]: '' }),
+    f('government_name'),
+  )
+
+  check(
+    'and is asked for nothing else — no civil ID, no register',
+    (() => {
+      const result = evictionTemplate.schema.safeParse({
+        ...sample,
+        [f('type')]: 'government',
+        [f('government_name')]: 'وزارة الأشغال العامة',
+      })
+      return result.success
+    })(),
+    true,
+  )
+
+  check(
     'رخصة فردية',
     lineFor({
       [f('type')]: 'licence',

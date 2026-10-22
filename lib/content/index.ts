@@ -43,6 +43,10 @@ function applyToField(field: FieldDef, base: string, content: ContentMap): Field
   return {
     ...field,
     labelAr: content[`${base}.label`] ?? field.labelAr,
+    labelWhen: field.labelWhen?.map((alt, i) => ({
+      ...alt,
+      labelAr: content[`${base}.label.when${i + 1}`] ?? alt.labelAr,
+    })),
     hintAr: content[`${base}.hint`] ?? field.hintAr,
     placeholder: content[`${base}.placeholder`] ?? field.placeholder,
     rowFields: field.rowFields?.map((sub) =>

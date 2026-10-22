@@ -7,7 +7,11 @@ import DateField from '@/components/date-field'
 import HintButton from '@/components/hint'
 import { flagPosition } from '@/lib/nationalities'
 import type { FieldDef } from '@/lib/templates/types'
-import { fieldString as str, isFieldVisible } from '@/lib/templates/visibility'
+import {
+  fieldLabel,
+  fieldString as str,
+  isFieldVisible,
+} from '@/lib/templates/visibility'
 
 type Values = Record<string, unknown>
 
@@ -66,6 +70,8 @@ export function Field({
   disabled?: boolean
 }) {
   const error = errors[field.name]
+  // the wording can depend on another answer — see FieldDef.labelWhen
+  const label = fieldLabel(field, values)
 
   if (!isFieldVisible(field, values)) return null
 
@@ -94,10 +100,8 @@ export function Field({
             disabled={disabled}
           />
           <div className="label-row">
-            <label htmlFor={field.name}>{field.labelAr}</label>
-            {field.hintAr ? (
-              <HintButton text={field.hintAr} forLabel={field.labelAr} />
-            ) : null}
+            <label htmlFor={field.name}>{label}</label>
+            {field.hintAr ? <HintButton text={field.hintAr} forLabel={label} /> : null}
           </div>
         </div>
         {error ? <div className="field-error">{error}</div> : null}
@@ -119,12 +123,10 @@ export function Field({
     <div className="field" style={spanStyle(field)}>
       <div className="label-row">
         <label htmlFor={field.name}>
-          {field.labelAr}
+          {label}
           {field.required ? <span className="req">*</span> : null}
         </label>
-        {field.hintAr ? (
-          <HintButton text={field.hintAr} forLabel={field.labelAr} />
-        ) : null}
+        {field.hintAr ? <HintButton text={field.hintAr} forLabel={label} /> : null}
       </div>
 
       {field.type === 'date' ? (

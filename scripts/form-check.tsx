@@ -269,5 +269,96 @@ console.log('\n--- the case-type cards')
   }
 }
 
+// ---------- a government body as the other side ----------
+//
+// A ministry has no civil card and no commercial register, and the address
+// line stops calling it «المدعى عليه». The second half is a label that moves
+// with another answer, which only rendering can show.
+console.log('\n--- جهة حكومية')
+{
+  const evictionFields = allFields(evictionTemplate as never)
+  const field = (name: string): FieldDef => {
+    const found = evictionFields.find((f) => f.name === name)
+    if (!found) throw new Error(`no field named ${name}`)
+    return found
+  }
+  const draw = (name: string, values: Record<string, unknown>) =>
+    renderToStaticMarkup(
+      <Field
+        field={field(name)}
+        values={values}
+        errors={{}}
+        onChange={() => undefined}
+      />,
+    )
+
+  const ministry = { defendant_type: 'government' }
+  const person = { defendant_type: 'natural' }
+
+  check(
+    'جهة حكومية is offered on the صفة select',
+    draw('defendant_type', {}).includes('جهة حكومية'),
+    true,
+  )
+  check(
+    'choosing it asks for the entity name',
+    draw('defendant_government_name', ministry).includes('اسم الجهة الحكومية'),
+    true,
+  )
+  check(
+    'and nobody else is asked for it',
+    draw('defendant_government_name', person),
+    '',
+  )
+  check(
+    'a ministry is not asked for a civil card',
+    draw('defendant_civil_id', ministry),
+    '',
+  )
+  check('nor for a nationality', draw('defendant_nationality', ministry), '')
+  check(
+    'nor for a commercial register',
+    draw('defendant_company_register', ministry),
+    '',
+  )
+
+  check(
+    'the address is normally the respondent’s',
+    draw('defendant_address', person).includes('عنوان المدعى عليه'),
+    true,
+  )
+  check(
+    'and becomes the entity’s once a ministry is chosen',
+    draw('defendant_address', ministry).includes('عنوان الجهة الحكومية'),
+    true,
+  )
+  check(
+    'without turning into a second field',
+    draw('defendant_address', ministry).includes('عنوان المدعى عليه'),
+    false,
+  )
+  check(
+    'it is still the same input, holding the same value',
+    draw('defendant_address', {
+      ...ministry,
+      defendant_address: 'العاصمة – قطعة (1)',
+    }).includes('العاصمة – قطعة (1)'),
+    true,
+  )
+
+  // and the lawyer can reword the alternative, like any other label
+  const content = contentDefaults()
+  check(
+    'the alternative wording is on the content screen',
+    content['field.eviction-petition.defendant_address.label.when1'],
+    'عنوان الجهة الحكومية',
+  )
+  check(
+    'so is the entity name field',
+    content['field.eviction-petition.defendant_government_name.label'],
+    'اسم الجهة الحكومية',
+  )
+}
+
 console.log(failures ? `\n${failures} FAILED` : '\nAll checks passed.')
 process.exit(failures ? 1 : 0)

@@ -16,6 +16,18 @@ export function fieldString(value: unknown): string {
 }
 
 /**
+ * The label this field shows right now. A field can carry alternative wordings
+ * that depend on another answer, so the same input can read «عنوان المدعى
+ * عليه» or «عنوان الجهة الحكومية» without becoming two fields with two values.
+ */
+export function fieldLabel(field: FieldDef, values: Record<string, unknown>): string {
+  for (const alt of field.labelWhen ?? []) {
+    if (alt.equals.includes(fieldString(values[alt.field]))) return alt.labelAr
+  }
+  return field.labelAr
+}
+
+/**
  * A field with `showWhen` exists only while another field holds one of the
  * listed values. Hidden means unmounted, so it submits nothing at all and the
  * schema decides what an absent value means.
