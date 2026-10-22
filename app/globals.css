@@ -1897,3 +1897,72 @@ a.brand {
     transition: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Maintaining the list of الأعمال الداخلية
+   Each job is a card: its name and the order arrows on the header line, its
+   fields below, and the one irreversible action kept apart at the bottom.
+--------------------------------------------------------------------------- */
+.job-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.job-title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--ink);
+}
+
+.job-order {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.job-order form {
+  display: contents;
+}
+
+.section-add:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.section-add:disabled:hover {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--brand);
+}
+
+/* deleting is the only thing here that cannot be undone, so it sits below a
+   rule, away from حفظ, and asks a second time before it happens */
+.job-danger {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.job-danger form {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.link-danger {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--danger);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.link-danger:hover {
+  color: var(--ink);
+}

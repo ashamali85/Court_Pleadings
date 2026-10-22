@@ -1,5 +1,4 @@
 import { templates } from '@/lib/templates'
-import { INTERNAL_JOBS, jobContentKey } from '@/lib/internal/jobs'
 import { baseFieldName } from '@/lib/templates/party'
 import type { FieldDef } from '@/lib/templates/types'
 
@@ -13,7 +12,6 @@ import type { FieldDef } from '@/lib/templates/types'
  */
 
 export const CONTENT_GROUPS: { key: string; titleAr: string }[] = [
-  { key: 'internal', titleAr: 'الأعمال الداخلية' },
   { key: 'common', titleAr: 'عناصر عامة' },
   { key: 'nav', titleAr: 'الشريط العلوي' },
   { key: 'login', titleAr: 'صفحة الدخول' },
@@ -81,6 +79,28 @@ const STATIC_DEFAULTS: Record<string, string> = {
   'admin.internal.planned': 'قيد الإعداد',
   'admin.internal.plannedHint':
     'لم تُحدَّد تفاصيل هذا العمل بعد. سيُبنى هذا الصفحة عند ورود تعليمات المكتب.',
+  'admin.jobs.title': 'إدارة الأعمال الداخلية',
+  'admin.jobs.subtitle': 'أضف الأعمال التي يقوم بها المكتب، وأعد ترتيبها أو أخفها.',
+  'admin.jobs.addTitle': 'إضافة عمل',
+  'admin.jobs.addHint': 'يظهر العمل في القائمة فور إضافته، وله صفحته الخاصة.',
+  'admin.jobs.name': 'اسم العمل',
+  'admin.jobs.description': 'وصف مختصر (اختياري)',
+  'admin.jobs.add': 'إضافة',
+  'admin.jobs.added': 'تمت إضافة العمل.',
+  'admin.jobs.nameRequired': 'اسم العمل مطلوب.',
+  'admin.jobs.visible': 'يظهر في القائمة',
+  'admin.jobs.visibleHint': 'إخفاء العمل يبقيه هنا ويخرجه من قائمة الأعمال الداخلية.',
+  'admin.jobs.hidden': 'مخفي',
+  'admin.jobs.hiddenNotice': 'هذا العمل مخفي ولا يظهر في قائمة الأعمال الداخلية.',
+  'admin.jobs.moveUp': 'تحريك لأعلى',
+  'admin.jobs.moveDown': 'تحريك لأسفل',
+  'admin.jobs.remove': 'حذف العمل',
+  'admin.jobs.confirmRemove': 'تأكيد الحذف نهائياً',
+  'admin.jobs.cancel': 'إلغاء',
+  'admin.jobs.deleted': 'تم حذف العمل.',
+  'admin.jobs.empty': 'لا توجد أعمال بعد. أضف أول عمل من الأعلى.',
+  'admin.jobs.addFirst': 'إضافة أول عمل',
+  'admin.jobs.openJob': 'فتح صفحة العمل',
   'admin.internal.back': 'رجوع إلى الأعمال الداخلية',
   'client.new.chooseTitle': 'ما نوع الدعوى؟',
   'client.new.chooseHint': 'اختر نوع الدعوى لتظهر لك الأسئلة الخاصة بها.',
@@ -165,11 +185,6 @@ const STATIC_DEFAULTS: Record<string, string> = {
 /** Built-in wording for every key, including the ones derived from templates. */
 export function contentDefaults(): Record<string, string> {
   const out: Record<string, string> = { ...STATIC_DEFAULTS }
-
-  for (const job of INTERNAL_JOBS) {
-    out[jobContentKey(job, 'name')] = job.titleAr
-    out[jobContentKey(job, 'description')] = job.descriptionAr
-  }
 
   for (const template of templates) {
     out[`template.${template.key}.name`] = template.nameAr

@@ -3,7 +3,7 @@ import { EmptyArt } from '@/components/brand'
 import Topbar from '@/components/topbar'
 import { requireAdmin } from '@/lib/auth'
 import { getContent, translator } from '@/lib/content'
-import { INTERNAL_JOBS, jobContentKey } from '@/lib/internal/jobs'
+import { isPlanned, listActiveJobs } from '@/lib/internal/jobs'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +12,7 @@ export default async function InternalJobsPage() {
   const admin = await requireAdmin()
   const content = await getContent()
   const t = translator(content)
+  const jobs = await listActiveJobs()
 
   return (
     <>
@@ -23,26 +24,32 @@ export default async function InternalJobsPage() {
               <h1>{t('nav.internal')}</h1>
               <p className="muted">{t('admin.internal.subtitle')}</p>
             </div>
+            <Link className="btn secondary" href="/admin/internal/manage">
+              {t('admin.jobs.title')}
+            </Link>
           </div>
 
-          {INTERNAL_JOBS.length === 0 ? (
+          {jobs.length === 0 ? (
             <div className="card">
               <div className="empty">
                 <EmptyArt className="empty-art" />
                 <p>{t('admin.internal.empty')}</p>
+                <Link className="btn" href="/admin/internal/manage">
+                  {t('admin.jobs.addFirst')}
+                </Link>
               </div>
             </div>
           ) : (
             <div className="choice-list">
-              {INTERNAL_JOBS.map((job) => (
-                <div className="choice-card" key={job.slug}>
-                  <Link className="choice-name" href={`/admin/internal/${job.slug}`}>
-                    {content[jobContentKey(job, 'name')] ?? job.titleAr}
+              {jobs.map((job) => (
+                <div className="choice-card" key={job.id}>
+                  <Link className="choice-name" href={`/admin/internal/${job.id}`}>
+                    {job.titleAr}
                   </Link>
-                  <span className="choice-desc">
-                    {content[jobContentKey(job, 'description')] ?? job.descriptionAr}
-                  </span>
-                  {job.placeholder ? (
+                  {job.descriptionAr ? (
+                    <span className="choice-desc">{job.descriptionAr}</span>
+                  ) : null}
+                  {isPlanned(job) ? (
                     <span className="choice-note">{t('admin.internal.planned')}</span>
                   ) : null}
                 </div>

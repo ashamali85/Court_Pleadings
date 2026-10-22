@@ -147,6 +147,24 @@ model SiteText {
   updatedBy User? @relation(fields: [updatedById], references: [id])
 }
 
+/// الأعمال الداخلية — the office's own work, as opposed to client requests.
+///
+/// The list is the lawyer's to maintain, so it lives here rather than in the
+/// code: adding a job is a row, and its page exists the moment it is saved.
+model InternalJob {
+  id            String   @id @default(cuid())
+  titleAr       String
+  descriptionAr String?
+  /// where it sits in the list; the lawyer reorders with the arrows
+  position      Int      @default(0)
+  /// hidden from the list without losing it
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([position])
+}
+
 /// Sequential human-facing reference numbers, e.g. SR-2026-0001
 model Counter {
   id    String @id @default(cuid())

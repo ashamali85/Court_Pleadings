@@ -76,12 +76,16 @@ ask.
 
 ## الأعمال الداخلية (/admin/internal)
 
-The office's own work, as opposed to the requests clients send in. A job is
-one entry in `lib/internal/jobs.ts`: a slug, a name, a line of explanation.
-Its page then exists at `/admin/internal/<slug>` with nothing else to write,
-and its wording joins `/admin/content` automatically. `placeholder: true`
-marks a job that is named but not built, and makes both the list and the page
-say so plainly rather than pretending.
+The office's own work, as opposed to the requests clients send in. The list is
+the lawyer's to maintain, so it is a table (`InternalJob`) rather than code:
+they add, rename, reorder, hide and delete on `/admin/internal/manage`, and a
+job's page exists at `/admin/internal/<id>` the moment it is saved. No deploy
+is involved in adding one.
+
+`isPlanned()` in `lib/internal/jobs.ts` is the one place that decides whether
+a job's page says «قيد الإعداد» — today every job does, because the pages are
+scaffolding until the office says what each one produces. When a job gets real
+behaviour, that is the function to narrow.
 
 The lawyer's three areas are `/admin/internal`, `/admin/requests` (the inbox)
 and `/admin/content`; `/admin` is the welcome page that points at them.
@@ -103,7 +107,10 @@ and `/admin/content`; `/admin` is the welcome page that points at them.
 
 ```
 npm run typecheck && npm run smoke && npm run claim:check \
-  && npm run form:check && npm run attachments:check && npm run search:check
+  && npm run form:check && npm run content:check \
+  && npm run attachments:check && npm run search:check
 ```
 
-All six pass before anything is delivered.
+All seven pass before anything is delivered. `content:check` is the one that
+catches a screen asking for wording nobody wrote — that ships as the raw key
+printed where a heading should be, and nothing else notices.

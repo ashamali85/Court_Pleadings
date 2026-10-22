@@ -15,7 +15,8 @@
     "search:check": "tsx scripts/search-check.ts",
     "attachments:check": "tsx scripts/attachments-check.ts",
     "form:check": "tsx scripts/form-check.tsx",
-    "claim:check": "tsx scripts/claim-check.ts"
+    "claim:check": "tsx scripts/claim-check.ts",
+    "content:check": "tsx scripts/content-check.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",

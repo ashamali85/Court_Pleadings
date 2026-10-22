@@ -1,51 +1,61 @@
 /**
- * الأعمال الداخلية — the work the office does for itself, as opposed to the
- * requests clients send in.
+ * الأعمال الداخلية — the office's own work, as opposed to the requests clients
+ * send in.
  *
- * This is the registry and nothing else: a job is a slug, a name, and a line
- * saying what it is for. Adding one is a single entry here, and its page then
- * exists at /admin/internal/<slug> without another file being touched.
+ * The list is the lawyer's to maintain on /admin/internal/manage, so it lives
+ * in the database: adding a job is a row, and its page exists at
+ * /admin/internal/<id> the moment it is saved. Nothing here needs a deploy.
  *
- * The entries below are placeholders, standing in until the office says what
- * belongs here. They carry `placeholder: true`, which is what makes the list
- * and the page say plainly that nothing has been built yet rather than
- * pretending otherwise.
+ * A job named but not yet built says so on its own page — see `isPlanned`.
  */
+import 'server-only'
+import db from '@/lib/db'
+
 export type InternalJob = {
-  /** the URL segment, and the key its wording hangs off */
-  slug: string
+  id: string
   titleAr: string
-  descriptionAr: string
-  /** named but not built yet */
-  placeholder?: boolean
+  descriptionAr: string | null
+  position: number
+  active: boolean
 }
 
-export const INTERNAL_JOBS: InternalJob[] = [
-  {
-    slug: 'job-1',
-    titleAr: 'عمل داخلي (1)',
-    descriptionAr: 'في انتظار تحديد هذا العمل من المكتب.',
-    placeholder: true,
-  },
-  {
-    slug: 'job-2',
-    titleAr: 'عمل داخلي (2)',
-    descriptionAr: 'في انتظار تحديد هذا العمل من المكتب.',
-    placeholder: true,
-  },
-  {
-    slug: 'job-3',
-    titleAr: 'عمل داخلي (3)',
-    descriptionAr: 'في انتظار تحديد هذا العمل من المكتب.',
-    placeholder: true,
-  },
-]
+const SELECT = {
+  id: true,
+  titleAr: true,
+  descriptionAr: true,
+  position: true,
+  active: true,
+} as const
 
-export function getInternalJob(slug: string): InternalJob | undefined {
-  return INTERNAL_JOBS.find((job) => job.slug === slug)
+/** the order the list shows them in: the lawyer's own, then oldest first */
+const ORDER = [{ position: 'asc' as const }, { createdAt: 'asc' as const }]
+
+/** what the lawyer sees on /admin/internal — the ones they have not hidden */
+export async function listActiveJobs(): Promise<InternalJob[]> {
+  return db.internalJob.findMany({
+    where: { active: true },
+    orderBy: ORDER,
+    select: SELECT,
+  })
 }
 
-/** `internal.job.<slug>.name` / `.description` — so the office can reword both */
-export function jobContentKey(job: InternalJob, part: 'name' | 'description') {
-  return `internal.job.${job.slug}.${part}`
+/** what the maintenance page sees: everything, hidden ones included */
+export async function listAllJobs(): Promise<InternalJob[]> {
+  return db.internalJob.findMany({ orderBy: ORDER, select: SELECT })
 }
+
+export async function getJob(id: string): Promise<InternalJob | null> {
+  return db.internalJob.findUnique({ where: { id }, select: SELECT })
+}
+
+/**
+ * A job with nothing built behind it yet. Today that is every job — the pages
+ * are scaffolding until the office says what each one does — and this is the
+ * single place that decides how such a page reads.
+ */
+export function isPlanned(_job: InternalJob): boolean {
+  return true
+}
+
+export const JOB_TITLE_MAX = 120
+export const JOB_DESCRIPTION_MAX = 400
