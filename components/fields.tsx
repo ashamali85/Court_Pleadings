@@ -4,11 +4,14 @@ import type { CSSProperties, ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import Combobox, { type ComboOption } from '@/components/combobox'
 import DateField from '@/components/date-field'
+import HintButton from '@/components/hint'
 import { flagPosition } from '@/lib/nationalities'
 import type { FieldDef } from '@/lib/templates/types'
 import { fieldString as str, isFieldVisible } from '@/lib/templates/visibility'
 
 type Values = Record<string, unknown>
+
+export { default as HintButton } from '@/components/hint'
 
 /**
  * The 12-column form column. Each Field places itself with `--span`, so a
@@ -47,47 +50,6 @@ function flagIcon(option: ComboOption): ReactNode {
 
 function optionIconFor(field: FieldDef) {
   return field.optionIcon === 'flag' ? flagIcon : undefined
-}
-
-/** Small ؟ button that reveals the field's guidance on click. */
-export function HintButton({ text, forLabel }: { text: string; forLabel: string }) {
-  const [open, setOpen] = useState(false)
-  const wrapRef = useRef<HTMLSpanElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-
-    const onPointerDown = (event: MouseEvent | TouchEvent) => {
-      if (!wrapRef.current?.contains(event.target as Node)) setOpen(false)
-    }
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false)
-    }
-
-    document.addEventListener('mousedown', onPointerDown)
-    document.addEventListener('touchstart', onPointerDown)
-    document.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown)
-      document.removeEventListener('touchstart', onPointerDown)
-      document.removeEventListener('keydown', onKeyDown)
-    }
-  }, [open])
-
-  return (
-    <span className="hint-wrap" ref={wrapRef}>
-      <button
-        type="button"
-        className="hint-btn"
-        aria-expanded={open}
-        aria-label={`تعليمات حقل ${forLabel}`}
-        onClick={() => setOpen((v) => !v)}
-      >
-        ؟
-      </button>
-      {open ? <span className="hint-pop">{text}</span> : null}
-    </span>
-  )
 }
 
 export function Field({

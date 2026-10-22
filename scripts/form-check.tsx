@@ -11,6 +11,9 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { Field } from '@/components/fields'
 import { blankInstrument } from '@/lib/claim/instruments'
+import HintButton from '@/components/hint'
+import { contentDefaults } from '@/lib/content/defaults'
+import { templates } from '@/lib/templates'
 import { claimTemplate } from '@/lib/templates/claim'
 import { evictionDefaults, evictionTemplate } from '@/lib/templates/eviction'
 import { allFields } from '@/lib/templates'
@@ -216,6 +219,54 @@ console.log('\n--- مطالبة مالية: what the client is actually shown')
   const privateRow = rowHtml('private_acknowledgement')
   check('an إقرار عرفي has no number to give', privateRow.includes('الرقم'), false)
   check('but still has a date', privateRow.includes('التاريخ'), true)
+}
+
+// ---------- choosing a case type ----------
+//
+// The card shows the name and nothing else; the explanation lives behind the
+// ؟ and comes from the content map, so the lawyer rewords it on /admin/content
+// rather than in the code.
+console.log('\n--- the case-type cards')
+{
+  const content = contentDefaults()
+
+  for (const template of templates) {
+    const explanation = content[`template.${template.key}.description`]
+    check(
+      `${template.key}: has an explanation to show`,
+      Boolean(explanation && explanation.trim().length > 10),
+      true,
+    )
+    check(
+      `${template.key}: and the lawyer can edit it`,
+      Object.keys(content).includes(`template.${template.key}.description`),
+      true,
+    )
+
+    const closed = renderToStaticMarkup(
+      <HintButton
+        text={explanation}
+        forLabel={content[`template.${template.key}.name`]}
+        labelPrefix="شرح"
+      />,
+    )
+    check(
+      `${template.key}: the explanation is not printed on the card`,
+      closed.includes(explanation),
+      false,
+    )
+    check(`${template.key}: only the ؟ is`, closed.includes('؟'), true)
+    check(
+      `${template.key}: which says what it explains`,
+      closed.includes(`aria-label="شرح ${content[`template.${template.key}.name`]}"`),
+      true,
+    )
+    check(
+      `${template.key}: and starts closed`,
+      closed.includes('aria-expanded="false"'),
+      true,
+    )
+  }
 }
 
 console.log(failures ? `\n${failures} FAILED` : '\nAll checks passed.')

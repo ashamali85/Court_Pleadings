@@ -1743,36 +1743,51 @@ input[type='number'] {
 }
 
 .choice-card {
-  display: block;
+  /* the anchor inside stretches over this box, so the whole card is one
+     target; `relative` is what it stretches against */
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   padding: var(--space-5);
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-1);
-  text-decoration: none;
-  color: inherit;
   transition:
     border-color var(--dur-fast) var(--ease-out),
     box-shadow var(--dur-fast) var(--ease-out);
 }
 
-.choice-card:hover {
+.choice-card:hover,
+.choice-card:focus-within {
   border-color: var(--brand);
   box-shadow: var(--shadow-2);
 }
 
 .choice-name {
-  display: block;
   font-size: var(--text-lg);
   font-weight: var(--weight-bold);
   color: var(--ink);
-  margin-bottom: var(--space-2);
+  text-decoration: none;
 }
 
-.choice-desc {
-  display: block;
-  color: var(--ink-soft);
-  line-height: 1.7;
+.choice-name::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+/* the ؟ has to sit above the stretched link to be clickable at all */
+.choice-card .hint-wrap {
+  position: relative;
+  z-index: 1;
+}
+
+/* a case type's explanation is a paragraph, not a one-line field hint */
+.choice-card .hint-pop {
+  width: min(440px, 80vw);
 }
 
 @media (prefers-reduced-motion: reduce) {

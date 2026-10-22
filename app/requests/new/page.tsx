@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { submitRequest } from '@/app/requests/actions'
 import RequestForm from '@/app/requests/new/request-form'
+import HintButton from '@/components/hint'
 import Topbar from '@/components/topbar'
 import { requireUser } from '@/lib/auth'
 import { env } from '@/lib/env'
@@ -46,18 +47,30 @@ export default async function NewRequestPage({
             </div>
 
             <div className="choice-list">
-              {templates.map((template) => (
-                <Link
-                  key={template.key}
-                  className="choice-card"
-                  href={`/requests/new?type=${encodeURIComponent(template.key)}`}
-                >
-                  <span className="choice-name">{templateName(template, content)}</span>
-                  <span className="choice-desc">
-                    {templateDescription(template, content)}
-                  </span>
-                </Link>
-              ))}
+              {templates.map((template) => {
+                const name = templateName(template, content)
+                const explanation = templateDescription(template, content)
+                return (
+                  <div className="choice-card" key={template.key}>
+                    {/* the link stretches over the whole card (see .choice-name
+                        in globals.css), so the card is one target; the ؟ sits
+                        above it and is a target of its own */}
+                    <Link
+                      className="choice-name"
+                      href={`/requests/new?type=${encodeURIComponent(template.key)}`}
+                    >
+                      {name}
+                    </Link>
+                    {explanation ? (
+                      <HintButton
+                        text={explanation}
+                        forLabel={name}
+                        labelPrefix={t('client.new.explain')}
+                      />
+                    ) : null}
+                  </div>
+                )
+              })}
             </div>
           </div>
         </main>

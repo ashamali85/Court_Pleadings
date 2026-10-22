@@ -70,6 +70,8 @@ const STATIC_DEFAULTS: Record<string, string> = {
   'client.new.chooseTitle': 'ما نوع الدعوى؟',
   'client.new.chooseHint': 'اختر نوع الدعوى لتظهر لك الأسئلة الخاصة بها.',
   'client.new.changeType': 'تغيير نوع الدعوى',
+  // read out to screen readers as «شرح <اسم الدعوى>»
+  'client.new.explain': 'شرح',
   'client.new.attachSection': 'المرفقات',
   'client.new.noteSection': 'ملاحظات إضافية',
   'client.new.noteLabel': 'ملاحظات للمحامي (اختياري)',
