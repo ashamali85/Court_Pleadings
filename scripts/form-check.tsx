@@ -296,9 +296,26 @@ console.log('\n--- جهة حكومية')
   const person = { defendant_type: 'natural' }
 
   check(
-    'جهة حكومية is offered on the صفة select',
+    'جهة حكومية is offered to المدعى عليه',
     draw('defendant_type', {}).includes('جهة حكومية'),
     true,
+  )
+  check(
+    'and to المدعي it is not',
+    draw('plaintiff_type', {}).includes('جهة حكومية'),
+    false,
+  )
+  check(
+    'while المدعي keeps its other four',
+    draw('plaintiff_type', {}).includes('رخصة فردية'),
+    true,
+  )
+  check(
+    'and has no entity-name field to orphan',
+    allFields(evictionTemplate as never).some(
+      (f) => f.name === 'plaintiff_government_name',
+    ),
+    false,
   )
   check(
     'choosing it asks for the entity name',

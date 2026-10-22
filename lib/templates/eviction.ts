@@ -3,20 +3,35 @@ import { weekdayAr } from '@/lib/numerals'
 import {
   COMPANY_FORM_LABEL,
   PARTY_TYPES,
+  PRIVATE_PARTY_TYPES,
   partyFields,
   partyLine,
   partyShape,
   readParty,
   validateParty,
   type Heir,
+  type PartyType,
   type PartyValues,
 } from '@/lib/templates/party'
 import { amountToArabicWords, formatAmount } from '@/lib/tafqeet'
 import type { FieldDef, Placeholders, TemplateDef } from '@/lib/templates/types'
 
-/** the two sides, and the word each one is called in the form and the pleading */
-export const PLAINTIFF = { prefix: 'plaintiff', labelAr: 'المدعي' } as const
-export const DEFENDANT = { prefix: 'defendant', labelAr: 'المدعى عليه' } as const
+/**
+ * The two sides: the word each is called in the form and the pleading, and the
+ * shapes it may take. They differ in one respect only — a government body can
+ * be sued here but does not sue here, so «جهة حكومية» is offered to the
+ * respondent alone.
+ */
+export const PLAINTIFF = {
+  prefix: 'plaintiff',
+  labelAr: 'المدعي',
+  types: PRIVATE_PARTY_TYPES,
+} as const
+export const DEFENDANT = {
+  prefix: 'defendant',
+  labelAr: 'المدعى عليه',
+  types: PARTY_TYPES as readonly PartyType[],
+} as const
 
 const DATE_RE = /^\d{1,2}\/\d{1,2}\/\d{4}$/
 
@@ -53,7 +68,6 @@ export const evictionSchema = z
     plaintiff_company_form: partyShape.company_form,
     plaintiff_company_register: partyShape.company_register,
     plaintiff_company_civil_no: partyShape.company_civil_no,
-    plaintiff_government_name: partyShape.government_name,
     plaintiff_establishment_name: partyShape.establishment_name,
     plaintiff_owner_name: partyShape.owner_name,
     plaintiff_owner_civil_id: partyShape.owner_civil_id,
@@ -107,7 +121,15 @@ export const evictionSchema = z
 
     // both sides, same rules, one definition
     for (const side of [PLAINTIFF, DEFENDANT]) {
-      validateParty(readParty(v, side.prefix), side.prefix, need, side.labelAr)
+      const party = readParty(v, side.prefix)
+      // the form offers each side only its own shapes; a request that arrives
+      // with another one was not filled in on these screens
+      need(
+        party.type === undefined || side.types.includes(party.type),
+        [`${side.prefix}_type`],
+        `صفة ${side.labelAr} غير مقبولة`,
+      )
+      validateParty(party, side.prefix, need, side.labelAr)
     }
 
     if (v.arrears_to_month < v.arrears_from_month) {
@@ -150,7 +172,6 @@ export const evictionDefaults: EvictionValues = {
   plaintiff_company_form: '',
   plaintiff_company_register: '',
   plaintiff_company_civil_no: '',
-  plaintiff_government_name: '',
   plaintiff_establishment_name: '',
   plaintiff_owner_name: '',
   plaintiff_owner_civil_id: '',
@@ -443,13 +464,13 @@ export const evictionTemplate: TemplateDef<EvictionValues> = {
     {
       key: 'plaintiff',
       titleAr: PLAINTIFF.labelAr,
-      fields: partyFields(PLAINTIFF.prefix, PLAINTIFF.labelAr),
+      fields: partyFields(PLAINTIFF.prefix, PLAINTIFF.labelAr, PLAINTIFF.types),
     },
     {
       key: 'defendant',
       titleAr: DEFENDANT.labelAr,
       fields: [
-        ...partyFields(DEFENDANT.prefix, DEFENDANT.labelAr),
+        ...partyFields(DEFENDANT.prefix, DEFENDANT.labelAr, DEFENDANT.types),
         fields.defendant_address,
       ],
     },

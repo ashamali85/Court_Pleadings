@@ -20,6 +20,19 @@ export const PARTY_TYPES = [
 ] as const
 export type PartyType = (typeof PARTY_TYPES)[number]
 
+/**
+ * The shapes a party can take when it is not the state. A ministry can be
+ * sued, but the office's clients are private parties, so «جهة حكومية» is
+ * offered on the respondent's side only.
+ */
+export const PRIVATE_PARTY_TYPES = PARTY_TYPES.filter(
+  (type) => type !== 'government',
+) as readonly PartyType[]
+
+export function isPartyType(value: string): value is PartyType {
+  return (PARTY_TYPES as readonly string[]).includes(value)
+}
+
 /** Kuwaiti civil ID: twelve digits, no separators. */
 export const CIVIL_ID_RE = /^\d{12}$/
 
@@ -330,11 +343,17 @@ const nationalityOptions = NATIONALITIES.map((n) => ({
  * thing that differs between المدعي and المدعى عليه is the word in the first
  * label, which is why both sections are guaranteed to stay identical.
  */
-export function partyFields(prefix: string, labelAr: string): FieldDef[] {
+export function partyFields(
+  prefix: string,
+  labelAr: string,
+  /** which shapes this side may take; defaults to all of them */
+  types: readonly PartyType[] = PARTY_TYPES,
+): FieldDef[] {
   const n = (key: string) => `${prefix}_${key}`
-  const only = (...types: PartyType[]) => ({ field: n('type'), equals: types })
+  const only = (...wanted: PartyType[]) => ({ field: n('type'), equals: wanted })
+  const offers = (type: PartyType) => types.includes(type)
 
-  return [
+  const fields: FieldDef[] = [
     {
       name: n('type'),
       width: 'sel',
@@ -343,13 +362,17 @@ export function partyFields(prefix: string, labelAr: string): FieldDef[] {
       hintAr: `تحدد هذه الصفة الحقول المطلوبة وصياغة اسم ${labelAr} في الصحيفة.`,
       type: 'select',
       required: true,
-      options: [
-        { value: 'natural', labelAr: 'شخص طبيعي' },
-        { value: 'heirs', labelAr: 'ورثة' },
-        { value: 'company', labelAr: 'شركة' },
-        { value: 'licence', labelAr: 'رخصة فردية' },
-        { value: 'government', labelAr: 'جهة حكومية' },
-      ],
+      options: (
+        [
+          { value: 'natural', labelAr: 'شخص طبيعي' },
+          { value: 'heirs', labelAr: 'ورثة' },
+          { value: 'company', labelAr: 'شركة' },
+          { value: 'licence', labelAr: 'رخصة فردية' },
+          { value: 'government', labelAr: 'جهة حكومية' },
+        ] as const
+      )
+        .filter((option) => offers(option.value))
+        .map((option) => ({ value: option.value, labelAr: option.labelAr })),
     },
 
     /*
@@ -582,4 +605,16 @@ export function partyFields(prefix: string, labelAr: string): FieldDef[] {
       placeholder: '000000000',
     },
   ]
+
+  return fields.filter((field) => {
+    // a field that exists only for a shape this side cannot take is dropped,
+    // so restricting the صفة list cannot leave an orphan input behind it.
+    // A value that is not a shape at all is left alone — the legacy name field
+    // keys off '' , which means «no صفة chosen yet» and belongs to every side.
+    const when = field.showWhen
+    if (!when || when.field !== n('type')) return true
+    return when.equals.some(
+      (value) => !isPartyType(value) || offers(value as PartyType),
+    )
+  })
 }

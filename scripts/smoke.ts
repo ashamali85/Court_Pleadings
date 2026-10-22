@@ -105,13 +105,14 @@ const trimmed = evictionTemplate.derive(
 check('renumbering: arrears becomes first', trimmed.ordinal_arrears, 'أولاً')
 check('renumbering: costs becomes second', trimmed.ordinal_costs, 'ثانياً')
 
-// ---------- the four types, for BOTH sides ----------
+// ---------- the party types, for BOTH sides ----------
 //
-// The same battery is run against المدعي and المدعى عليه. If the two ever
-// stop behaving identically, this is what notices.
+// The same battery is run against المدعي and المدعى عليه. The two sides are
+// deliberately identical in every respect but one — only the respondent may be
+// a government body — so this is what notices if they drift any further apart.
 for (const side of [
-  { prefix: 'plaintiff', labelAr: 'المدعي' },
-  { prefix: 'defendant', labelAr: 'المدعى عليه' },
+  { prefix: 'plaintiff', labelAr: 'المدعي', government: false },
+  { prefix: 'defendant', labelAr: 'المدعى عليه', government: true },
 ]) {
   console.log(`\n--- ${side.labelAr} (${side.prefix})`)
   const f = (key: string) => `${side.prefix}_${key}`
@@ -178,33 +179,33 @@ for (const side of [
     'شركة الخليج العقارية – ذات مسؤولية محدودة – سجل تجاري رقم (123456) – رقم الجهة المدني (100234567)',
   )
 
-  check(
-    'جهة حكومية',
-    lineFor({
-      [f('type')]: 'government',
-      [f('government_name')]: 'وزارة الأشغال العامة',
-    }),
-    'وزارة الأشغال العامة',
-  )
-
-  check(
-    'a ministry must be named',
-    errorPath({ [f('type')]: 'government', [f('government_name')]: '' }),
-    f('government_name'),
-  )
-
-  check(
-    'and is asked for nothing else — no civil ID, no register',
-    (() => {
-      const result = evictionTemplate.schema.safeParse({
-        ...sample,
+  if (side.government) {
+    check(
+      'جهة حكومية',
+      lineFor({
         [f('type')]: 'government',
         [f('government_name')]: 'وزارة الأشغال العامة',
-      })
-      return result.success
-    })(),
-    true,
-  )
+      }),
+      'وزارة الأشغال العامة',
+    )
+
+    check(
+      'a ministry must be named',
+      errorPath({ [f('type')]: 'government', [f('government_name')]: '' }),
+      f('government_name'),
+    )
+  } else {
+    // the form does not offer it to this side, and a hand-posted request that
+    // claims it is refused rather than quietly accepted
+    check(
+      'جهة حكومية is not offered to المدعي',
+      errorPath({
+        [f('type')]: 'government',
+        [f('government_name')]: 'وزارة الأشغال العامة',
+      }),
+      f('type'),
+    )
+  }
 
   check(
     'رخصة فردية',
@@ -376,6 +377,16 @@ console.log('\n--- a legacy request, opened and resubmitted')
   }
 
   const legacy = parsed.data as unknown as Record<string, unknown>
+
+  // restricting one side's صفة list must not take the legacy field with it:
+  // it keys off «no صفة chosen», which is not a صفة and belongs to both sides
+  for (const side of ['plaintiff', 'defendant']) {
+    check(
+      `${side}: the legacy field survived the صفة restriction`,
+      allFields(evictionTemplate as never).some((f) => f.name === `${side}_name`),
+      true,
+    )
+  }
 
   for (const side of ['plaintiff', 'defendant']) {
     const stored = legacy[`${side}_name`]
