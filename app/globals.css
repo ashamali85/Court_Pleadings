@@ -1847,6 +1847,40 @@ input[type='number'] {
   border-radius: inherit;
 }
 
+/*
+ * A card with an explanation under its name stacks instead of sitting in a
+ * row: the case-type cards carry a name and a ؟ side by side, these carry a
+ * name, a line of explanation and sometimes a quiet note.
+ */
+.choice-card:has(.choice-desc) {
+  display: block;
+}
+
+.choice-desc {
+  display: block;
+  margin-top: var(--space-2);
+  color: var(--ink-soft);
+  line-height: 1.7;
+}
+
+/* how many requests are waiting, or that a job is not built yet — it must not
+   compete with the name above it */
+.choice-note {
+  display: inline-block;
+  margin-top: var(--space-3);
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+}
+
+/* the office's name is the way home */
+a.brand {
+  text-decoration: none;
+  color: inherit;
+}
+
 /* the ؟ has to sit above the stretched link to be clickable at all */
 .choice-card .hint-wrap {
   position: relative;

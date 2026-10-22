@@ -74,6 +74,18 @@ ask.
   fields marked `adminOnly`: the request form drops them and the review screen
   shows them.
 
+## الأعمال الداخلية (/admin/internal)
+
+The office's own work, as opposed to the requests clients send in. A job is
+one entry in `lib/internal/jobs.ts`: a slug, a name, a line of explanation.
+Its page then exists at `/admin/internal/<slug>` with nothing else to write,
+and its wording joins `/admin/content` automatically. `placeholder: true`
+marks a job that is named but not built, and makes both the list and the page
+say so plainly rather than pretending.
+
+The lawyer's three areas are `/admin/internal`, `/admin/requests` (the inbox)
+and `/admin/content`; `/admin` is the welcome page that points at them.
+
 ## Conventions worth keeping
 
 - **Arabic is the product.** Labels, errors and documents are Arabic; code and

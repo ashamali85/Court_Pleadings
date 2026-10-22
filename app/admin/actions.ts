@@ -177,7 +177,7 @@ export async function generateDocument(
   })
 
   revalidatePath(`/admin/requests/${requestId}`)
-  revalidatePath('/admin')
+  revalidatePath('/admin/requests')
   return {
     ok: t('message.generated', { version }),
     documentId: created.id,
@@ -246,7 +246,7 @@ export async function rejectRequest(
     note,
   })
 
-  revalidatePath('/admin')
+  revalidatePath('/admin/requests')
   revalidatePath(`/admin/requests/${requestId}`)
   revalidatePath('/requests')
   return { ok: t('message.rejected') }

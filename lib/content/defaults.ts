@@ -1,4 +1,5 @@
 import { templates } from '@/lib/templates'
+import { INTERNAL_JOBS, jobContentKey } from '@/lib/internal/jobs'
 import { baseFieldName } from '@/lib/templates/party'
 import type { FieldDef } from '@/lib/templates/types'
 
@@ -12,6 +13,7 @@ import type { FieldDef } from '@/lib/templates/types'
  */
 
 export const CONTENT_GROUPS: { key: string; titleAr: string }[] = [
+  { key: 'internal', titleAr: 'الأعمال الداخلية' },
   { key: 'common', titleAr: 'عناصر عامة' },
   { key: 'nav', titleAr: 'الشريط العلوي' },
   { key: 'login', titleAr: 'صفحة الدخول' },
@@ -45,6 +47,7 @@ const STATIC_DEFAULTS: Record<string, string> = {
   'nav.myRequests': 'طلباتي',
   'nav.newRequest': 'طلب جديد',
   'nav.inbox': 'الطلبات الواردة',
+  'nav.internal': 'الأعمال الداخلية',
   'nav.content': 'نصوص الموقع',
   'nav.logout': 'تسجيل الخروج',
 
@@ -68,6 +71,17 @@ const STATIC_DEFAULTS: Record<string, string> = {
   'client.list.empty': 'لا توجد طلبات بعد.',
   'client.list.editBtn': 'تعديل الطلب وإعادة إرساله',
   'client.list.rejectionLabel': 'سبب الإعادة',
+  'admin.home.title': 'أهلاً {name}',
+  'admin.home.subtitle': 'اختر ما تريد العمل عليه.',
+  'admin.home.internalHint': 'أعمال المكتب التي لا تأتي من العملاء.',
+  'admin.home.inboxHint': 'طلبات العملاء للمراجعة وإصدار الصحف.',
+  'admin.home.contentHint': 'تعديل النصوص والعناوين الظاهرة في الموقع.',
+  'admin.internal.subtitle': 'اختر العمل المطلوب.',
+  'admin.internal.empty': 'لا توجد أعمال داخلية بعد.',
+  'admin.internal.planned': 'قيد الإعداد',
+  'admin.internal.plannedHint':
+    'لم تُحدَّد تفاصيل هذا العمل بعد. سيُبنى هذا الصفحة عند ورود تعليمات المكتب.',
+  'admin.internal.back': 'رجوع إلى الأعمال الداخلية',
   'client.new.chooseTitle': 'ما نوع الدعوى؟',
   'client.new.chooseHint': 'اختر نوع الدعوى لتظهر لك الأسئلة الخاصة بها.',
   'client.new.changeType': 'تغيير نوع الدعوى',
@@ -151,6 +165,11 @@ const STATIC_DEFAULTS: Record<string, string> = {
 /** Built-in wording for every key, including the ones derived from templates. */
 export function contentDefaults(): Record<string, string> {
   const out: Record<string, string> = { ...STATIC_DEFAULTS }
+
+  for (const job of INTERNAL_JOBS) {
+    out[jobContentKey(job, 'name')] = job.titleAr
+    out[jobContentKey(job, 'description')] = job.descriptionAr
+  }
 
   for (const template of templates) {
     out[`template.${template.key}.name`] = template.nameAr

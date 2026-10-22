@@ -86,7 +86,7 @@ export default async function ReviewRequestPage({
                 {t(`status.${request.status}`)}
               </span>
             </div>
-            <Link className="btn secondary" href="/admin">
+            <Link className="btn secondary" href="/admin/requests">
               {t('admin.review.backBtn')}
             </Link>
           </div>

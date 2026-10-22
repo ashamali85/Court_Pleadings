@@ -16,7 +16,7 @@ export default function Topbar({
   return (
     <header className="topbar">
       <div className="topbar-inner">
-        <div className="brand">
+        <Link className="brand" href={user.role === 'ADMIN' ? '/admin' : '/requests'}>
           <img src="/brand/logo.png" alt="" className="brand-mark" />
           <span>
             {t('common.appName')}
@@ -25,11 +25,12 @@ export default function Topbar({
               {user.role === 'ADMIN' ? t('common.roleAdmin') : t('common.roleClient')}
             </small>
           </span>
-        </div>
+        </Link>
         <nav>
           {user.role === 'ADMIN' ? (
             <>
-              <Link href="/admin">{t('admin.inbox.title')}</Link>
+              <Link href="/admin/internal">{t('nav.internal')}</Link>
+              <Link href="/admin/requests">{t('admin.inbox.title')}</Link>
               <Link href="/admin/content">{t('nav.content')}</Link>
             </>
           ) : (

@@ -179,6 +179,6 @@ export async function updateRequest(
   })
 
   revalidatePath('/requests')
-  revalidatePath('/admin')
+  revalidatePath('/admin/requests')
   redirect(`/requests?updated=${encodeURIComponent(request.reference)}`)
 }

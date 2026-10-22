@@ -1,27 +1,48 @@
 import Link from 'next/link'
-import { EmptyArt } from '@/components/brand'
 import Topbar from '@/components/topbar'
 import { requireAdmin } from '@/lib/auth'
-import { getContent, templateName, translator } from '@/lib/content'
+import { getContent, translator } from '@/lib/content'
 import db from '@/lib/db'
-import { statusBadge } from '@/lib/status'
-import { getTemplate } from '@/lib/templates'
 
 export const dynamic = 'force-dynamic'
 
-export default async function AdminInbox() {
+/**
+ * The lawyer's home. Not a list of anything — the three places the office
+ * works are each their own area now, and this says which is which and whether
+ * anything is waiting.
+ */
+export default async function AdminHome() {
   const admin = await requireAdmin()
   const content = await getContent()
   const t = translator(content)
 
-  const requests = await db.caseRequest.findMany({
-    orderBy: [{ createdAt: 'desc' }],
-    include: { client: true },
+  const pending = await db.caseRequest.count({
+    where: { status: { in: ['SUBMITTED', 'UNDER_REVIEW'] } },
   })
 
-  const pending = requests.filter(
-    (r: { status: string }) => r.status === 'SUBMITTED' || r.status === 'UNDER_REVIEW',
-  ).length
+  const areas = [
+    {
+      href: '/admin/internal',
+      titleAr: t('nav.internal'),
+      descriptionAr: t('admin.home.internalHint'),
+      note: '',
+    },
+    {
+      href: '/admin/requests',
+      titleAr: t('admin.inbox.title'),
+      descriptionAr: t('admin.home.inboxHint'),
+      note:
+        pending > 0
+          ? `${pending} ${t('admin.inbox.pending')}`
+          : t('admin.inbox.noPending'),
+    },
+    {
+      href: '/admin/content',
+      titleAr: t('nav.content'),
+      descriptionAr: t('admin.home.contentHint'),
+      note: '',
+    },
+  ]
 
   return (
     <>
@@ -30,76 +51,21 @@ export default async function AdminInbox() {
         <div className="container">
           <div className="page-head">
             <div>
-              <h1>{t('admin.inbox.title')}</h1>
-              <p className="muted">
-                {pending > 0
-                  ? `${pending} ${t('admin.inbox.pending')}`
-                  : t('admin.inbox.noPending')}
-              </p>
+              <h1>{t('admin.home.title', { name: admin.fullName })}</h1>
+              <p className="muted">{t('admin.home.subtitle')}</p>
             </div>
           </div>
 
-          <div className="card">
-            {requests.length === 0 ? (
-              <div className="empty">
-                <EmptyArt className="empty-art" />
-                <p>{t('admin.inbox.empty')}</p>
+          <div className="choice-list">
+            {areas.map((area) => (
+              <div className="choice-card" key={area.href}>
+                <Link className="choice-name" href={area.href}>
+                  {area.titleAr}
+                </Link>
+                <span className="choice-desc">{area.descriptionAr}</span>
+                {area.note ? <span className="choice-note">{area.note}</span> : null}
               </div>
-            ) : (
-              <table>
-                <thead>
-                  <tr>
-                    <th>{t('client.list.colRef')}</th>
-                    <th>{t('admin.inbox.colClient')}</th>
-                    <th>{t('client.list.colType')}</th>
-                    <th>{t('admin.inbox.colSummary')}</th>
-                    <th>{t('client.list.colDate')}</th>
-                    <th>{t('client.list.colStatus')}</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {requests.map((r) => {
-                    const template = getTemplate(r.templateKey)
-                    const badge = statusBadge(r.status)
-                    let summary = t('common.none')
-                    try {
-                      if (template) summary = template.summary(r.data as never)
-                    } catch {
-                      summary = t('common.none')
-                    }
-                    return (
-                      <tr key={r.id}>
-                        <td>
-                          <span className="ref">{r.reference}</span>
-                        </td>
-                        <td>
-                          {r.client.fullName}
-                          <div className="hint" dir="ltr">
-                            {r.client.email}
-                          </div>
-                        </td>
-                        <td>
-                          {template ? templateName(template, content) : r.templateKey}
-                        </td>
-                        <td>{summary}</td>
-                        <td>{r.createdAt.toLocaleDateString('ar-KW')}</td>
-                        <td>
-                          <span className={`badge ${badge.className}`}>
-                            {t(`status.${r.status}`)}
-                          </span>
-                        </td>
-                        <td>
-                          <Link href={`/admin/requests/${r.id}`}>
-                            {t('admin.inbox.reviewLink')}
-                          </Link>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            )}
+            ))}
           </div>
         </div>
       </main>
