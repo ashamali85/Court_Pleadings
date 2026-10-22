@@ -146,6 +146,7 @@ for (const side of [
     lineFor({
       [f('type')]: 'natural',
       [f('full_name')]: 'خالد يوسف العنزي',
+      [f('gender')]: 'male',
       [f('civil_id')]: '289010112345',
       [f('nationality')]: 'KW',
     }),
@@ -240,6 +241,7 @@ for (const side of [
     errorPath({
       [f('type')]: 'natural',
       [f('full_name')]: 'خالد يوسف العنزي',
+      [f('gender')]: 'male',
       [f('civil_id')]: '2890101',
       [f('nationality')]: 'KW',
     }),
@@ -320,6 +322,7 @@ console.log('\n--- both sides at once')
     plaintiff_company_civil_no: '100234567',
     defendant_type: 'natural',
     defendant_full_name: 'طارق موسى عطا عمار',
+    defendant_gender: 'male',
     defendant_civil_id: '274082805061',
     defendant_nationality: 'JO',
   })
@@ -417,6 +420,7 @@ console.log('\n--- a legacy request, opened and resubmitted')
     ...legacy,
     plaintiff_type: 'natural',
     plaintiff_full_name: 'خالد يوسف العنزي',
+    plaintiff_gender: 'male',
     plaintiff_civil_id: '289010112345',
     plaintiff_nationality: 'KW',
   })

@@ -15,6 +15,14 @@ import HintButton from '@/components/hint'
 import { contentDefaults } from '@/lib/content/defaults'
 import { templates } from '@/lib/templates'
 import { claimTemplate } from '@/lib/templates/claim'
+import {
+  DEFENDANT,
+  PARTY_SIDES,
+  PARTY_TYPES,
+  PLAINTIFF,
+  PRIVATE_PARTY_TYPES,
+  partySection,
+} from '@/lib/templates/party'
 import { evictionDefaults, evictionTemplate } from '@/lib/templates/eviction'
 import { allFields } from '@/lib/templates'
 import type { FieldDef } from '@/lib/templates/types'
@@ -134,59 +142,8 @@ console.log('\n--- مطالبة مالية: what the client is actually shown')
   )
   check('while the lawyer still gets all five', claimTemplate.sections.length, 5)
 
-  const company = { claimant_kind: 'company' }
-  const person = { claimant_kind: 'woman' }
-  check(
-    'a company is asked for its commercial register',
-    renderToStaticMarkup(
-      <Field
-        field={named('claimant_commercial_register')}
-        values={company}
-        errors={{}}
-        onChange={() => undefined}
-      />,
-    ).includes('السجل التجاري'),
-    true,
-  )
-  check(
-    'and not for a civil card',
-    renderToStaticMarkup(
-      <Field
-        field={named('claimant_civil_id')}
-        values={company}
-        errors={{}}
-        onChange={() => undefined}
-      />,
-    ),
-    '',
-  )
-  check(
-    'a person is asked the other way round',
-    renderToStaticMarkup(
-      <Field
-        field={named('claimant_entity_civil_no')}
-        values={person}
-        errors={{}}
-        onChange={() => undefined}
-      />,
-    ),
-    '',
-  )
-  check(
-    'the صفة select starts unchosen rather than guessing',
-    shown(
-      renderToStaticMarkup(
-        <Field
-          field={named('claimant_kind')}
-          values={{}}
-          errors={{}}
-          onChange={() => undefined}
-        />,
-      ),
-    ),
-    '— اختر —',
-  )
-
+  // the party questions are the shared ones now, checked once for every
+  // template further down; what is checked here is this case type's own
   /** the instrument rows, rendered with one row of the given kind */
   const rowHtml = (kind: string) =>
     renderToStaticMarkup(
@@ -375,6 +332,85 @@ console.log('\n--- جهة حكومية')
     content['field.eviction-petition.defendant_government_name.label'],
     'اسم الجهة الحكومية',
   )
+}
+
+// ---------- every pleading type asks about its parties identically ----------
+//
+// This is the rule the office asked for, enforced rather than remembered: a
+// new صحيفة دعوى gets the same المدعي and المدعى عليه as every other one, with
+// the same dropdowns and the same validation. A template that hand-rolls its
+// own party fields, renames a key, reorders them or quietly drops one fails
+// here — which is the point.
+console.log('\n--- المدعي والمدعى عليه are the same in every pleading type')
+{
+  /** what a section must contain, exactly, before anything case-specific */
+  const canonical = (side: typeof PLAINTIFF | typeof DEFENDANT) =>
+    partySection(side).fields
+
+  for (const template of templates) {
+    for (const side of PARTY_SIDES) {
+      const section = template.sections.find((s) => s.key === side.sectionKey)
+
+      check(`${template.key}: has a ${side.labelAr} section`, Boolean(section), true)
+      if (!section) continue
+
+      check(
+        `${template.key}/${side.sectionKey}: titled as the shared side is`,
+        section.titleAr,
+        side.labelAr,
+      )
+
+      const want = canonical(side)
+      const got = section.fields.slice(0, want.length)
+
+      check(
+        `${template.key}/${side.sectionKey}: the same party fields, in order`,
+        got.map((f) => f?.name).join(', '),
+        want.map((f) => f.name).join(', '),
+      )
+
+      // identical names are not enough: a label, a width, a rule or an option
+      // list could still have been changed in passing. Report the first field
+      // that differs by name rather than printing two field definitions.
+      const differing = want.find(
+        (field, i) => JSON.stringify(got[i]) !== JSON.stringify(field),
+      )
+      check(
+        `${template.key}/${side.sectionKey}: and each one defined identically`,
+        differing ? `${differing.name} was changed` : 'identical',
+        'identical',
+      )
+
+      // anything after the shared block is this case's own business, but it
+      // may not be another party field wearing a different name
+      const extra = section.fields.slice(want.length)
+      check(
+        `${template.key}/${side.sectionKey}: nothing of its own pretends to be a party field`,
+        extra.every(
+          (f) => !f.name.startsWith(`${side.prefix}_`) || f.name.endsWith('_address'),
+        ),
+        true,
+      )
+    }
+
+    // and the two sides differ in exactly one respect, everywhere
+    const pick = (sectionKey: string) =>
+      template.sections
+        .find((s) => s.key === sectionKey)
+        ?.fields.find((f) => f.name.endsWith('_type'))
+        ?.options?.map((o) => o.value) ?? []
+
+    check(
+      `${template.key}: المدعي is offered the private shapes`,
+      pick('plaintiff').join(','),
+      PRIVATE_PARTY_TYPES.join(','),
+    )
+    check(
+      `${template.key}: المدعى عليه is offered those plus جهة حكومية`,
+      pick('defendant').join(','),
+      PARTY_TYPES.join(','),
+    )
+  }
 }
 
 console.log(failures ? `\n${failures} FAILED` : '\nAll checks passed.')

@@ -1,18 +1,27 @@
 /**
  * A party to the case — المدعي or المدعى عليه.
  *
- * Both sides are the same four shapes with the same rules and the same
- * sentence in the pleading, so everything with logic in it lives here once and
- * is parameterised by which side it is describing. Only the zod field
- * declarations are written out per side, in eviction.ts, because a prefix
- * computed at runtime would cost the schema its named types.
+ * EVERY pleading type asks about its two parties in exactly the same way, and
+ * this file is the only place that says how. The same six shapes, the same
+ * fields, the same rules, on both sides of every case. A new case type builds
+ * its party sections with `partySection()` and adds nothing of its own, and
+ * scripts/form-check.tsx fails if one ever tries.
+ *
+ * What is *not* shared is the sentence each document writes about a party: the
+ * eviction petition and the financial claim describe the same company in
+ * different words, and both wordings are the office's own. So this file holds
+ * the data, the fields and the rules; each pleading holds its own prose.
+ *
+ * Only the zod field declarations are written out per side, in each template,
+ * because a prefix computed at runtime would cost the schema its named types.
  */
 import { z } from 'zod'
 import { nationalityLabel, NATIONALITIES } from '@/lib/nationalities'
-import type { FieldDef } from '@/lib/templates/types'
+import type { FieldDef, SectionDef } from '@/lib/templates/types'
 
 export const PARTY_TYPES = [
   'natural',
+  'several',
   'heirs',
   'company',
   'licence',
@@ -56,13 +65,45 @@ export const COMPANY_FORM_LABEL = new Map<string, string>(
   COMPANY_FORMS.map((f) => [f.value, f.labelAr]),
 )
 
-export const heirSchema = z.object({
+/** One named person in a repeatable list: an heir, or one of several parties. */
+export const personSchema = z.object({
   name: z.string().trim().max(300).default(''),
   civil_id: z.string().trim().max(20).default(''),
   nationality: z.string().trim().max(40).default(''),
 })
 
-export type Heir = z.infer<typeof heirSchema>
+export type Person = z.infer<typeof personSchema>
+
+/** the name this had while heirs were the only repeatable party */
+export const heirSchema = personSchema
+export type Heir = Person
+
+/**
+ * The two sides of every case. A pleading type does not get to name them, pick
+ * their shapes, or decide which section they live in — that is what «exactly
+ * the same way» means.
+ *
+ * They differ in one respect only: a government body can be sued but does not
+ * sue through this portal, so «جهة حكومية» is offered to the respondent alone.
+ */
+export const PLAINTIFF = {
+  prefix: 'plaintiff',
+  labelAr: 'المدعي',
+  sectionKey: 'plaintiff',
+  types: PRIVATE_PARTY_TYPES,
+} as const
+
+export const DEFENDANT = {
+  prefix: 'defendant',
+  labelAr: 'المدعى عليه',
+  sectionKey: 'defendant',
+  types: PARTY_TYPES as readonly PartyType[],
+} as const
+
+export type PartySide = typeof PLAINTIFF | typeof DEFENDANT
+
+/** Both sides, in the order every form shows them. */
+export const PARTY_SIDES: readonly PartySide[] = [PLAINTIFF, DEFENDANT]
 
 /** The zod declarations for one side. Spread into the schema under a prefix. */
 export const partyShape = {
@@ -81,8 +122,17 @@ export const partyShape = {
   name: z.string().trim().max(4000).default(''),
 
   full_name: z.string().trim().max(300).default(''),
+  /*
+   * «ذكر» or «أنثى». Arabic agrees with the person throughout a pleading —
+   * «وأعلنته» against «وأعلنتها», «بأن يؤدي» against «بأن تؤدي» — so the one
+   * fact that settles every one of those is asked once, here.
+   */
+  gender: z.string().trim().max(10).default(''),
   civil_id: z.string().trim().max(20).default(''),
   nationality: z.string().trim().max(40).default(''),
+
+  /** أكثر من طرف: each person in their own right */
+  persons: z.array(personSchema).max(40).default([]),
 
   deceased_name: z.string().trim().max(300).default(''),
   heirs: z.array(heirSchema).max(40).default([]),
@@ -108,10 +158,12 @@ export type PartyValues = {
   type?: PartyType
   name: string
   full_name: string
+  gender: string
   civil_id: string
   nationality: string
+  persons: Person[]
   deceased_name: string
-  heirs: Heir[]
+  heirs: Person[]
   company_name: string
   company_form: string
   company_register: string
@@ -128,6 +180,7 @@ export type PartyValues = {
 const TEXT_KEYS = [
   'name',
   'full_name',
+  'gender',
   'civil_id',
   'nationality',
   'deceased_name',
@@ -159,9 +212,38 @@ export function readParty(
   }
   const type = values[`${prefix}_type`]
   party.type = PARTY_TYPES.includes(type as PartyType) ? (type as PartyType) : undefined
-  const heirs = values[`${prefix}_heirs`]
-  party.heirs = Array.isArray(heirs) ? (heirs as Heir[]) : []
+  const rows = (key: string) => {
+    const value = values[`${prefix}_${key}`]
+    return Array.isArray(value) ? (value as Person[]) : []
+  }
+  party.heirs = rows('heirs')
+  party.persons = rows('persons')
   return party
+}
+
+/**
+ * The grammatical form this party takes in Arabic prose — which is what every
+ * «وأعلنته / وأعلنتها / وأعلنتهم» in a pleading turns on.
+ *
+ * A company, an establishment and a government body are all feminine (الشركة،
+ * المؤسسة، الجهة); heirs and several parties are plural; a natural person is
+ * whatever they answered. A party with no صفة yet reads as masculine, which is
+ * what the office's forms have always defaulted to.
+ */
+export function partyForm(party: PartyValues): 'm' | 'f' | 'pl' {
+  switch (party.type) {
+    case 'company':
+    case 'licence':
+    case 'government':
+      return 'f'
+    case 'heirs':
+    case 'several':
+      return 'pl'
+    case 'natural':
+      return party.gender === 'female' ? 'f' : 'm'
+    default:
+      return 'm'
+  }
 }
 
 /** «فلان الفلاني – كويتي الجنسية – بطاقة مدنية رقم (000000000000)» */
@@ -173,71 +255,6 @@ export function personLine(name: string, civilId: string, nationality: string): 
   ]
     .filter(Boolean)
     .join(' – ')
-}
-
-/** The party's block exactly as it is written into the .docx. */
-export function partyLine(party: PartyValues): string {
-  switch (party.type) {
-    case 'natural':
-      return personLine(party.full_name, party.civil_id, party.nationality)
-
-    case 'heirs': {
-      const heirs = party.heirs
-        .filter((h) => h.name.trim())
-        .map((h, i) => `${i + 1}- ${personLine(h.name, h.civil_id, h.nationality)}`)
-        .join('\n')
-      const head = `ورثة المرحوم/ ${party.deceased_name.trim()}، وهم كل من:`
-      return heirs ? `${head}\n${heirs}` : head
-    }
-
-    case 'company':
-      return [
-        party.company_name.trim(),
-        COMPANY_FORM_LABEL.get(party.company_form) ?? '',
-        party.company_register ? `سجل تجاري رقم (${party.company_register})` : '',
-        party.company_civil_no ? `رقم الجهة المدني (${party.company_civil_no})` : '',
-      ]
-        .filter(Boolean)
-        .join(' – ')
-
-    case 'government':
-      // a ministry or authority is named and nothing else: it carries no civil
-      // number and no commercial register to cite
-      return party.government_name.trim()
-
-    case 'licence': {
-      /*
-       * «صيدلية راما لصاحبها علي محمود العريان – كويتي الجنسية – بطاقة مدنية
-       *  رقم (…) – سجل تجاري رقم (…) – رقم الجهة المدني (…)»
-       *
-       * The owner follows the establishment immediately, and the licence's own
-       * numbers close the line — so the reader gets the establishment, then
-       * the person answerable for it, then the registrations.
-       *
-       * «لصاحبها» agrees with a feminine establishment (صيدلية، مؤسسة، شركة),
-       * which is what this office's pleadings use.
-       */
-      const owner = personLine(
-        party.owner_name,
-        party.owner_civil_id,
-        party.owner_nationality,
-      )
-      const establishment = party.establishment_name.trim()
-      const head = owner ? `${establishment} لصاحبها ${owner}` : establishment
-
-      return [
-        head,
-        party.licence_register ? `سجل تجاري رقم (${party.licence_register})` : '',
-        party.licence_civil_no ? `رقم الجهة المدني (${party.licence_civil_no})` : '',
-      ]
-        .filter(Boolean)
-        .join(' – ')
-    }
-
-    default:
-      // submitted before the party types existed: the client typed the block
-      return party.name
-  }
 }
 
 type Issue = (ok: boolean, path: (string | number)[], message: string) => void
@@ -257,22 +274,37 @@ export function validateParty(
   const CIVIL_ID_MSG = 'الرقم المدني يجب أن يتكوّن من 12 رقماً'
   const at = (key: string) => [`${prefix}_${key}`]
 
+  /** every person in a repeatable list is checked the same way */
+  const checkPersons = (people: Person[], key: string, noun: string) => {
+    need(people.length > 0, at(key), `أضف ${noun} واحداً على الأقل`)
+    people.forEach((person, i) => {
+      const row = (field: string) => [`${prefix}_${key}`, i, field]
+      need(filled(person.name), row('name'), `اسم ${noun} مطلوب`)
+      need(CIVIL_ID_RE.test(person.civil_id), row('civil_id'), CIVIL_ID_MSG)
+      need(filled(person.nationality, 2), row('nationality'), 'الجنسية مطلوبة')
+    })
+  }
+
   switch (party.type) {
     case 'natural':
       need(filled(party.full_name), at('full_name'), `اسم ${labelAr} مطلوب`)
+      need(
+        party.gender === 'male' || party.gender === 'female',
+        at('gender'),
+        'النوع مطلوب',
+      )
       need(CIVIL_ID_RE.test(party.civil_id), at('civil_id'), CIVIL_ID_MSG)
       need(filled(party.nationality, 2), at('nationality'), 'الجنسية مطلوبة')
       break
 
+    case 'several':
+      checkPersons(party.persons, 'persons', 'طرف')
+      need(party.persons.length > 1, at('persons'), 'أضف طرفاً ثانياً على الأقل')
+      break
+
     case 'heirs':
       need(filled(party.deceased_name), at('deceased_name'), 'اسم المورِّث مطلوب')
-      need(party.heirs.length > 0, at('heirs'), 'أضف وريثاً واحداً على الأقل')
-      party.heirs.forEach((heir, i) => {
-        const row = (key: string) => [`${prefix}_heirs`, i, key]
-        need(filled(heir.name), row('name'), 'اسم الوريث مطلوب')
-        need(CIVIL_ID_RE.test(heir.civil_id), row('civil_id'), CIVIL_ID_MSG)
-        need(filled(heir.nationality, 2), row('nationality'), 'الجنسية مطلوبة')
-      })
+      checkPersons(party.heirs, 'heirs', 'وريث')
       break
 
     case 'company':
@@ -333,10 +365,64 @@ export function validateParty(
   }
 }
 
+/**
+ * One side's section, ready to drop into a template's `sections`. `extra` is
+ * for what the *case* needs beyond the party — the eviction petition asks the
+ * respondent for a service address, which is a fact about that case, not about
+ * the party. The party fields themselves are never passed in and never
+ * overridden.
+ */
+export function partySection(side: PartySide, extra: FieldDef[] = []): SectionDef {
+  return {
+    key: side.sectionKey,
+    titleAr: side.labelAr,
+    fields: [...partyFields(side.prefix, side.labelAr, side.types), ...extra],
+  }
+}
+
 const nationalityOptions = NATIONALITIES.map((n) => ({
   value: n.value,
   labelAr: n.labelAr,
 }))
+
+/** «ذكر / أنثى» — what every agreement in the pleading turns on */
+export const GENDER_OPTIONS = [
+  { value: 'male', labelAr: 'ذكر' },
+  { value: 'female', labelAr: 'أنثى' },
+]
+
+/** the three questions asked of each person in a repeatable list */
+const personRowFields: FieldDef[] = [
+  {
+    name: 'name',
+    width: 'name',
+    labelAr: 'الإسم الكامل',
+    type: 'text',
+    required: true,
+    placeholder: 'فلان الفلاني',
+  },
+  {
+    name: 'civil_id',
+    width: 'num',
+    span: 6,
+    labelAr: 'الرقم المدني',
+    type: 'text',
+    required: true,
+    latinDigits: true,
+    placeholder: '000000000000',
+  },
+  {
+    name: 'nationality',
+    searchable: true,
+    optionIcon: 'flag',
+    width: 'sel',
+    span: 6,
+    labelAr: 'الجنسية',
+    type: 'select',
+    required: true,
+    options: nationalityOptions,
+  },
+]
 
 /**
  * Every field for one side, in the order they appear in its section. The only
@@ -365,6 +451,7 @@ export function partyFields(
       options: (
         [
           { value: 'natural', labelAr: 'شخص طبيعي' },
+          { value: 'several', labelAr: 'أكثر من طرف' },
           { value: 'heirs', labelAr: 'ورثة' },
           { value: 'company', labelAr: 'شركة' },
           { value: 'licence', labelAr: 'رخصة فردية' },
@@ -404,9 +491,20 @@ export function partyFields(
       placeholder: 'فلان الفلاني الفلاني',
     },
     {
+      name: n('gender'),
+      width: 'short',
+      span: 4,
+      labelAr: 'النوع',
+      hintAr: 'تُضبط عليه ألفاظ التذكير والتأنيث في كل مواضع الصحيفة.',
+      type: 'select',
+      required: true,
+      showWhen: only('natural'),
+      options: GENDER_OPTIONS,
+    },
+    {
       name: n('civil_id'),
       width: 'num',
-      span: 6,
+      span: 4,
       labelAr: 'الرقم المدني',
       hintAr: 'اثنا عشر رقماً كما تظهر على البطاقة المدنية، بدون فواصل.',
       type: 'text',
@@ -420,7 +518,7 @@ export function partyFields(
       searchable: true,
       optionIcon: 'flag',
       width: 'sel',
-      span: 6,
+      span: 4,
       labelAr: 'الجنسية',
       type: 'select',
       required: true,
@@ -449,37 +547,21 @@ export function partyFields(
       rowLabelAr: 'وريث',
       addLabelAr: 'إضافة وريث',
       minRows: 1,
-      rowFields: [
-        {
-          name: 'name',
-          width: 'name',
-          labelAr: 'الإسم الكامل',
-          type: 'text',
-          required: true,
-          placeholder: 'فلان الفلاني',
-        },
-        {
-          name: 'civil_id',
-          width: 'num',
-          span: 6,
-          labelAr: 'الرقم المدني',
-          type: 'text',
-          required: true,
-          latinDigits: true,
-          placeholder: '000000000000',
-        },
-        {
-          name: 'nationality',
-          searchable: true,
-          optionIcon: 'flag',
-          width: 'sel',
-          span: 6,
-          labelAr: 'الجنسية',
-          type: 'select',
-          required: true,
-          options: nationalityOptions,
-        },
-      ],
+      rowFields: personRowFields,
+    },
+
+    /* --- أكثر من طرف --- */
+    {
+      name: n('persons'),
+      labelAr: `بيانات ${labelAr}`,
+      hintAr: 'كل طرف في سطر مستقل في الصحيفة، مرقّماً بالترتيب المدخل هنا.',
+      type: 'rows',
+      required: true,
+      showWhen: only('several'),
+      rowLabelAr: 'طرف',
+      addLabelAr: 'إضافة طرف',
+      minRows: 2,
+      rowFields: personRowFields,
     },
 
     /* --- جهة حكومية --- */

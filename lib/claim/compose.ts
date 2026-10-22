@@ -13,7 +13,7 @@
  * `vocabulary()` for its own document, so the صحيفة cannot reach the word
  * «المدعى عليه» and the حافظة cannot reach «المعلن إليه».
  */
-import { blankCase, formOf, relationshipText, type ClaimCase } from '@/lib/claim/case'
+import { relationshipText, type ClaimCase } from '@/lib/claim/case'
 import { courtLevel, courtName } from '@/lib/claim/court'
 import {
   domicile,
@@ -42,48 +42,152 @@ import {
 import { moneyPhrase } from '@/lib/claim/money'
 import { OFFICE } from '@/lib/claim/office'
 import { longDateAr } from '@/lib/numerals'
+import { COMPANY_FORM_LABEL, partyForm, type PartyValues } from '@/lib/templates/party'
 
 /** a gap the lawyer fills in Word, where the office leaves one */
 const GAP = '     '
 
 const show = (value: string, fallback = GAP) => (value.trim() ? value.trim() : fallback)
 
-/* --- the parties, as a line of text --------------------------------- */
+/* --- the parties, as this claim writes them -------------------------- */
 
 /**
- * «السيد/ فلان – كويتي الجنسية – بطاقة مدنية رقم (000000000000)» for a person,
- * «شركة … – الرقم المدني للجهة (…) – رقم السجل التجاري (…)» for a company.
+ * The party's block as the financial claim writes it.
+ *
+ * The data is the shared party model — the same six shapes every pleading type
+ * asks about — but the sentence is this document's own: the eviction petition
+ * describes the same company in a different order, and both wordings are the
+ * office's. That is why this lives here and not in party.ts.
  */
 export function partyLine(
-  party: ClaimCase['claimant'],
+  party: PartyValues,
   options: { honorific?: boolean; shortCivilId?: boolean } = {},
 ): string {
-  const form = formOf(party.kind)
-  const name = party.name.trim()
+  const form = partyForm(party)
+  const idLabel = options.shortCivilId ? 'ب.م.' : 'بطاقة مدنية رقم'
 
-  if (party.kind === 'company') {
-    return [
-      name,
-      party.entityCivilNo.trim()
-        ? `الرقم المدني للجهة (${party.entityCivilNo.trim()})`
-        : '',
-      party.commercialRegister.trim()
-        ? `رقم السجل التجاري (${party.commercialRegister.trim()})`
-        : '',
+  /** «السيد/ فلان – كويتي الجنسية – بطاقة مدنية رقم (…)» */
+  const person = (
+    name: string,
+    civilId: string,
+    nationality: string,
+    personForm: PartyForm,
+    withHonorific = options.honorific !== false,
+  ) =>
+    [
+      withHonorific ? `${honorific(personForm)}/ ${name.trim()}` : name.trim(),
+      nationalityPhrase(nationality, personForm),
+      civilId.trim() ? `${idLabel} (${civilId.trim()})` : '',
     ]
       .filter(Boolean)
       .join(' – ')
-  }
 
-  const idLabel = options.shortCivilId ? 'ب.م.' : 'بطاقة مدنية رقم'
-  const head = options.honorific === false ? name : `${honorific(form)}/ ${name}`
-  return [
-    head,
-    nationalityPhrase(party.nationality, form),
-    party.civilId.trim() ? `${idLabel} (${party.civilId.trim()})` : '',
-  ]
-    .filter(Boolean)
-    .join(' – ')
+  switch (party.type) {
+    case 'natural':
+      return person(party.full_name, party.civil_id, party.nationality, form)
+
+    case 'several':
+      return party.persons
+        .filter((p) => p.name.trim())
+        .map(
+          (p, i) =>
+            `${i + 1}- ${person(p.name, p.civil_id, p.nationality, 'm', false)}`,
+        )
+        .join('\n')
+
+    case 'heirs': {
+      const heirs = party.heirs
+        .filter((h) => h.name.trim())
+        .map(
+          (h, i) =>
+            `${i + 1}- ${person(h.name, h.civil_id, h.nationality, 'm', false)}`,
+        )
+        .join('\n')
+      const head = `ورثة المرحوم/ ${party.deceased_name.trim()}، وهم كل من:`
+      return heirs ? `${head}\n${heirs}` : head
+    }
+
+    case 'company':
+      // «شركة المثال التجارية شركة الشخص الواحد – الرقم المدني للجهة (…) –
+      //  رقم السجل التجاري (…)» — the legal form follows the name directly
+      return [
+        [party.company_name.trim(), COMPANY_FORM_LABEL.get(party.company_form) ?? '']
+          .filter(Boolean)
+          .join(' '),
+        party.company_civil_no.trim()
+          ? `الرقم المدني للجهة (${party.company_civil_no.trim()})`
+          : '',
+        party.company_register.trim()
+          ? `رقم السجل التجاري (${party.company_register.trim()})`
+          : '',
+      ]
+        .filter(Boolean)
+        .join(' – ')
+
+    case 'licence': {
+      // «صيدلية راما لصاحبها علي … – سجل تجاري رقم (…) – رقم الجهة المدني (…)»
+      const owner = person(
+        party.owner_name,
+        party.owner_civil_id,
+        party.owner_nationality,
+        'm',
+        false,
+      )
+      const establishment = party.establishment_name.trim()
+      return [
+        owner ? `${establishment} لصاحبها ${owner}` : establishment,
+        party.licence_register.trim()
+          ? `سجل تجاري رقم (${party.licence_register.trim()})`
+          : '',
+        party.licence_civil_no.trim()
+          ? `رقم الجهة المدني (${party.licence_civil_no.trim()})`
+          : '',
+      ]
+        .filter(Boolean)
+        .join(' – ')
+    }
+
+    case 'government':
+      return party.government_name.trim()
+
+    default:
+      // submitted before the party types existed: the client typed the block
+      return party.name.trim()
+  }
+}
+
+/**
+ * The party's bare name, for the places a document names them without their
+ * particulars — «لصالح شركة المثال التجارية»، the exhibit list's من and ضد.
+ */
+export function partyName(party: PartyValues): string {
+  switch (party.type) {
+    case 'natural':
+      return party.full_name.trim()
+    case 'several':
+      return party.persons
+        .filter((p) => p.name.trim())
+        .map((p) => p.name.trim())
+        .join(' و')
+    case 'heirs':
+      return `ورثة المرحوم/ ${party.deceased_name.trim()}`
+    case 'company':
+      // the office names a company with its legal form attached — «شركة
+      // المثال التجارية شركة الشخص الواحد» — in the exhibit list and wherever
+      // else the bare name appears
+      return [
+        party.company_name.trim(),
+        COMPANY_FORM_LABEL.get(party.company_form) ?? '',
+      ]
+        .filter(Boolean)
+        .join(' ')
+    case 'licence':
+      return party.establishment_name.trim()
+    case 'government':
+      return party.government_name.trim()
+    default:
+      return party.name.trim()
+  }
 }
 
 /* --- صحيفة الدعوى ---------------------------------------------------- */
@@ -108,8 +212,8 @@ export type ComposedLawsuit = {
 
 export function composeLawsuit(claim: ClaimCase): ComposedLawsuit {
   const words = vocabulary('lawsuit')
-  const cf = formOf(claim.claimant.kind)
-  const rf = formOf(claim.respondent.kind)
+  const cf = partyForm(claim.claimant)
+  const rf = partyForm(claim.respondent)
   const claimant = words.claimant(cf)
   const respondent = words.respondent(rf)
   const money = moneyPhrase(claim.amount)
@@ -206,11 +310,11 @@ export type ComposedDemand = {
 
 export function composeDemand(claim: ClaimCase): ComposedDemand {
   const words = vocabulary('demand')
-  const cf = formOf(claim.claimant.kind)
-  const rf = formOf(claim.respondent.kind)
+  const cf = partyForm(claim.claimant)
+  const rf = partyForm(claim.respondent)
   const creditor = words.claimant(cf)
   const money = moneyPhrase(claim.amount)
-  const name = claim.claimant.name.trim()
+  const name = partyName(claim.claimant)
 
   return {
     respondent: `${partyLine(claim.respondent, { shortCivilId: true })}         ${respectful(rf)}`,
@@ -271,8 +375,8 @@ export type ComposedOrder = {
 
 export function composeOrder(claim: ClaimCase): ComposedOrder {
   const words = vocabulary('order')
-  const cf = formOf(claim.claimant.kind)
-  const rf = formOf(claim.respondent.kind)
+  const cf = partyForm(claim.claimant)
+  const rf = partyForm(claim.respondent)
   const applicant = words.claimant(cf)
   const against = words.respondent(rf)
   const level = courtLevel(claim.amount)
@@ -321,7 +425,7 @@ export function composeOrder(claim: ClaimCase): ComposedOrder {
         '(166،167) من قانون المرافعات المدنية والتجارية.',
       order:
         `نأمر: بإلزام ${against}/ ${partyLine(claim.respondent, { honorific: false })} ` +
-        `بأن ${pays(rf)} ${withLam(applicant)}/ ${claim.claimant.name.trim()}، مبلغاً ` +
+        `بأن ${pays(rf)} ${withLam(applicant)}/ ${partyName(claim.claimant)}، مبلغاً ` +
         `وقدره ${money} والمصروفات، مع شمول الأمر بالنفاذ المعجل بلا كفالة.`,
       signature: `قاضي ${court}`,
     },
@@ -350,8 +454,8 @@ export type ComposedExhibits = {
 
 export function composeExhibits(claim: ClaimCase): ComposedExhibits {
   const words = vocabulary('exhibits')
-  const cf = formOf(claim.claimant.kind)
-  const rf = formOf(claim.respondent.kind)
+  const cf = partyForm(claim.claimant)
+  const rf = partyForm(claim.respondent)
   const respondent = words.respondent(rf)
 
   const rows: ExhibitRow[] = claim.instruments.map((instrument) => ({
@@ -361,7 +465,7 @@ export function composeExhibits(claim: ClaimCase): ComposedExhibits {
   }))
 
   // which document proves who the other side is depends on what they are
-  if (claim.respondent.kind === 'company') {
+  if (claim.respondent.type === 'company') {
     // «عقد تأسيس الشركة المدعى عليها» — the exhibit list names the company
     const company = `الشركة ${respondent}`
     rows.push(
@@ -390,9 +494,9 @@ export function composeExhibits(claim: ClaimCase): ComposedExhibits {
   }
 
   return {
-    from: claim.claimant.name.trim(),
+    from: partyName(claim.claimant),
     fromLabel: words.claimant(cf),
-    to: claim.respondent.name.trim(),
+    to: partyName(claim.respondent),
     toLabel: respondent,
     rows,
     total: exhibitTotal(rows),
@@ -411,7 +515,7 @@ export function exhibitTotal(rows: ExhibitRow[]): string {
 }
 
 /** convenience for the tests and for a future preview screen */
-export function composeAll(claim: ClaimCase = blankCase()) {
+export function composeAll(claim: ClaimCase) {
   return {
     lawsuit: composeLawsuit(claim),
     demand: composeDemand(claim),

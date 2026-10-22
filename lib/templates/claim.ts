@@ -11,13 +11,14 @@
  * docs/business-rules/template-notes.md §«قائمة الأسئلة».
  */
 import { z } from 'zod'
-import type { ClaimCase, ClaimParty, PartyKind } from '@/lib/claim/case'
-import { PARTY_KINDS, RELATIONSHIPS } from '@/lib/claim/case'
+import type { ClaimCase } from '@/lib/claim/case'
+import { RELATIONSHIPS } from '@/lib/claim/case'
 import {
   composeDemand,
   composeExhibits,
   composeLawsuit,
   composeOrder,
+  partyName,
 } from '@/lib/claim/compose'
 import { courtLevel, documentsFor } from '@/lib/claim/court'
 import { CLAIM_DOCUMENT_LABEL } from '@/lib/claim/grammar'
@@ -29,19 +30,18 @@ import {
   type InstrumentKind,
 } from '@/lib/claim/instruments'
 import { formatMoney } from '@/lib/claim/money'
-import { NATIONALITIES } from '@/lib/nationalities'
+import {
+  DEFENDANT,
+  PARTY_SIDES,
+  PLAINTIFF,
+  partySection,
+  partyShape,
+  readParty,
+  validateParty,
+} from '@/lib/templates/party'
 import type { FieldDef, Placeholders, TemplateDef } from '@/lib/templates/types'
 
 const DATE_RE = /^\d{1,2}\/\d{1,2}\/\d{4}$/
-const CIVIL_ID_RE = /^\d{12}$/
-const DIGITS_RE = /^\d{4,15}$/
-
-const nationalityOptions = NATIONALITIES.map((n) => ({
-  value: n.value,
-  labelAr: n.labelAr,
-}))
-
-const PERSON: PartyKind[] = ['man', 'woman', 'several']
 
 /* --- schema ---------------------------------------------------------- */
 
@@ -65,35 +65,51 @@ const instrumentSchema = z.object({
   amount: z.coerce.number().min(0).max(100_000_000).default(0),
 })
 
-/** one side's keys, written out per prefix so the values keep their names */
-const partyShape = {
-  kind: z.enum(PARTY_KINDS).catch('man'),
-  name: z.string().trim().max(300).default(''),
-  nationality: z.string().trim().max(40).default(''),
-  civil_id: z.string().trim().max(20).default(''),
-  entity_civil_no: z.string().trim().max(20).default(''),
-  commercial_register: z.string().trim().max(40).default(''),
-  representative: z.string().trim().max(300).default(''),
-}
-
 export const claimSchema = z
   .object({
-    claimant_kind: partyShape.kind,
-    claimant_name: partyShape.name,
-    claimant_nationality: partyShape.nationality,
-    claimant_civil_id: partyShape.civil_id,
-    claimant_entity_civil_no: partyShape.entity_civil_no,
-    claimant_commercial_register: partyShape.commercial_register,
-    claimant_representative: partyShape.representative,
+    /* the two parties, exactly as every other pleading type asks them */
+    plaintiff_type: partyShape.type,
+    plaintiff_name: partyShape.name,
+    plaintiff_full_name: partyShape.full_name,
+    plaintiff_gender: partyShape.gender,
+    plaintiff_civil_id: partyShape.civil_id,
+    plaintiff_nationality: partyShape.nationality,
+    plaintiff_persons: partyShape.persons,
+    plaintiff_deceased_name: partyShape.deceased_name,
+    plaintiff_heirs: partyShape.heirs,
+    plaintiff_company_name: partyShape.company_name,
+    plaintiff_company_form: partyShape.company_form,
+    plaintiff_company_register: partyShape.company_register,
+    plaintiff_company_civil_no: partyShape.company_civil_no,
+    plaintiff_establishment_name: partyShape.establishment_name,
+    plaintiff_owner_name: partyShape.owner_name,
+    plaintiff_owner_civil_id: partyShape.owner_civil_id,
+    plaintiff_owner_nationality: partyShape.owner_nationality,
+    plaintiff_licence_register: partyShape.licence_register,
+    plaintiff_licence_civil_no: partyShape.licence_civil_no,
 
-    respondent_kind: partyShape.kind,
-    respondent_name: partyShape.name,
-    respondent_nationality: partyShape.nationality,
-    respondent_civil_id: partyShape.civil_id,
-    respondent_entity_civil_no: partyShape.entity_civil_no,
-    respondent_commercial_register: partyShape.commercial_register,
-    respondent_representative: partyShape.representative,
-    respondent_address: z.string().trim().min(3, 'عنوان المعلن إليه مطلوب').max(2000),
+    defendant_type: partyShape.type,
+    defendant_name: partyShape.name,
+    defendant_full_name: partyShape.full_name,
+    defendant_gender: partyShape.gender,
+    defendant_civil_id: partyShape.civil_id,
+    defendant_nationality: partyShape.nationality,
+    defendant_persons: partyShape.persons,
+    defendant_deceased_name: partyShape.deceased_name,
+    defendant_heirs: partyShape.heirs,
+    defendant_company_name: partyShape.company_name,
+    defendant_company_form: partyShape.company_form,
+    defendant_company_register: partyShape.company_register,
+    defendant_company_civil_no: partyShape.company_civil_no,
+    defendant_establishment_name: partyShape.establishment_name,
+    defendant_owner_name: partyShape.owner_name,
+    defendant_owner_civil_id: partyShape.owner_civil_id,
+    defendant_owner_nationality: partyShape.owner_nationality,
+    defendant_licence_register: partyShape.licence_register,
+    defendant_licence_civil_no: partyShape.licence_civil_no,
+    defendant_government_name: partyShape.government_name,
+
+    defendant_address: z.string().trim().min(3, 'عنوان المعلن إليه مطلوب').max(2000),
 
     amount: z.coerce
       .number({ error: 'مبلغ المطالبة مطلوب' })
@@ -121,36 +137,15 @@ export const claimSchema = z
       if (!ok) ctx.addIssue({ code: 'custom', path, message })
     }
 
-    for (const side of ['claimant', 'respondent'] as const) {
-      const labelAr = side === 'claimant' ? 'الطالب' : 'المعلن إليه'
-      const kind = v[`${side}_kind`]
-      const at = (key: string) => [`${side}_${key}`]
-
-      need(v[`${side}_name`].trim().length >= 3, at('name'), `اسم ${labelAr} مطلوب`)
-
-      if (PERSON.includes(kind)) {
-        need(
-          v[`${side}_nationality`].trim().length >= 2,
-          at('nationality'),
-          'الجنسية مطلوبة',
-        )
-        need(
-          CIVIL_ID_RE.test(v[`${side}_civil_id`]),
-          at('civil_id'),
-          'الرقم المدني يجب أن يتكوّن من 12 رقماً',
-        )
-      } else {
-        need(
-          DIGITS_RE.test(v[`${side}_entity_civil_no`]),
-          at('entity_civil_no'),
-          'الرقم المدني للجهة مطلوب (أرقام فقط)',
-        )
-        need(
-          DIGITS_RE.test(v[`${side}_commercial_register`]),
-          at('commercial_register'),
-          'رقم السجل التجاري مطلوب (أرقام فقط)',
-        )
-      }
+    // the two parties follow the shared rules, like every pleading type
+    for (const side of PARTY_SIDES) {
+      const party = readParty(v, side.prefix)
+      need(
+        party.type === undefined || side.types.includes(party.type),
+        [`${side.prefix}_type`],
+        `صفة ${side.labelAr} غير مقبولة`,
+      )
+      validateParty(party, side.prefix, need, side.labelAr)
     }
 
     if (v.relationship === 'other') {
@@ -190,22 +185,55 @@ export const claimSchema = z
 export type ClaimValues = z.infer<typeof claimSchema>
 
 export const claimDefaults: ClaimValues = {
-  claimant_kind: 'company',
-  claimant_name: '',
-  claimant_nationality: 'KW',
-  claimant_civil_id: '',
-  claimant_entity_civil_no: '',
-  claimant_commercial_register: '',
-  claimant_representative: '',
+  // a new form starts on the commonest shape, as the eviction petition does;
+  // leaving it unset would show the legacy free-text field on a blank form
+  plaintiff_type: 'natural',
+  plaintiff_name: '',
+  plaintiff_full_name: '',
+  plaintiff_gender: '',
+  plaintiff_civil_id: '',
+  plaintiff_nationality: 'KW',
+  plaintiff_persons: [
+    { name: '', civil_id: '', nationality: 'KW' },
+    { name: '', civil_id: '', nationality: 'KW' },
+  ],
+  plaintiff_deceased_name: '',
+  plaintiff_heirs: [{ name: '', civil_id: '', nationality: 'KW' }],
+  plaintiff_company_name: '',
+  plaintiff_company_form: '',
+  plaintiff_company_register: '',
+  plaintiff_company_civil_no: '',
+  plaintiff_establishment_name: '',
+  plaintiff_owner_name: '',
+  plaintiff_owner_civil_id: '',
+  plaintiff_owner_nationality: 'KW',
+  plaintiff_licence_register: '',
+  plaintiff_licence_civil_no: '',
 
-  respondent_kind: 'man',
-  respondent_name: '',
-  respondent_nationality: 'KW',
-  respondent_civil_id: '',
-  respondent_entity_civil_no: '',
-  respondent_commercial_register: '',
-  respondent_representative: '',
-  respondent_address: '',
+  defendant_type: 'natural',
+  defendant_name: '',
+  defendant_full_name: '',
+  defendant_gender: '',
+  defendant_civil_id: '',
+  defendant_nationality: 'KW',
+  defendant_persons: [
+    { name: '', civil_id: '', nationality: 'KW' },
+    { name: '', civil_id: '', nationality: 'KW' },
+  ],
+  defendant_deceased_name: '',
+  defendant_heirs: [{ name: '', civil_id: '', nationality: 'KW' }],
+  defendant_company_name: '',
+  defendant_company_form: '',
+  defendant_company_register: '',
+  defendant_company_civil_no: '',
+  defendant_establishment_name: '',
+  defendant_owner_name: '',
+  defendant_owner_civil_id: '',
+  defendant_owner_nationality: 'KW',
+  defendant_licence_register: '',
+  defendant_licence_civil_no: '',
+  defendant_government_name: '',
+  defendant_address: '',
 
   amount: 0,
   relationship: 'commercial',
@@ -236,23 +264,11 @@ export const claimDefaults: ClaimValues = {
 
 /* --- values -> the case the composer understands ---------------------- */
 
-function readParty(values: ClaimValues, side: 'claimant' | 'respondent'): ClaimParty {
-  return {
-    kind: values[`${side}_kind`],
-    name: values[`${side}_name`],
-    nationality: values[`${side}_nationality`],
-    civilId: values[`${side}_civil_id`],
-    entityCivilNo: values[`${side}_entity_civil_no`],
-    commercialRegister: values[`${side}_commercial_register`],
-    representative: values[`${side}_representative`],
-  }
-}
-
 export function toCase(values: ClaimValues): ClaimCase {
   return {
-    claimant: readParty(values, 'claimant'),
-    respondent: readParty(values, 'respondent'),
-    respondentAddress: values.respondent_address,
+    claimant: readParty(values, PLAINTIFF.prefix),
+    respondent: readParty(values, DEFENDANT.prefix),
+    respondentAddress: values.defendant_address,
     amount: values.amount,
     relationship: values.relationship,
     relationshipOther: values.relationship_other,
@@ -270,103 +286,6 @@ export function toCase(values: ClaimValues): ClaimCase {
 }
 
 /* --- the form -------------------------------------------------------- */
-
-const kindOptions = [
-  { value: 'man', labelAr: 'شخص طبيعي — رجل' },
-  { value: 'woman', labelAr: 'شخص طبيعي — امرأة' },
-  { value: 'company', labelAr: 'شركة' },
-  { value: 'several', labelAr: 'أكثر من طرف' },
-]
-
-/**
- * Both sides are asked the same things, so the fields are generated once and
- * parameterised by side — the same discipline as the eviction petition's
- * party.ts, and for the same reason: the two sides cannot drift apart.
- */
-function partyFields(
-  side: 'claimant' | 'respondent',
-  labelAr: string,
-  options: { representative?: boolean } = {},
-): FieldDef[] {
-  const n = (key: string) => `${side}_${key}`
-  const person = { field: n('kind'), equals: ['man', 'woman', 'several'] }
-  const company = { field: n('kind'), equals: ['company'] }
-
-  const fields: FieldDef[] = [
-    {
-      name: n('kind'),
-      labelAr: `صفة ${labelAr}`,
-      hintAr: `تحدد هذه الصفة الحقول المطلوبة وصياغة ${labelAr} في المستندات (الشركة تُعامل معاملة المؤنث).`,
-      type: 'select',
-      width: 'sel',
-      span: 5,
-      required: true,
-      options: kindOptions,
-    },
-    {
-      name: n('name'),
-      labelAr: `اسم ${labelAr}`,
-      type: 'text',
-      width: 'org',
-      required: true,
-    },
-    {
-      name: n('nationality'),
-      labelAr: 'الجنسية',
-      type: 'select',
-      searchable: true,
-      optionIcon: 'flag',
-      width: 'sel',
-      span: 6,
-      required: true,
-      showWhen: person,
-      options: nationalityOptions,
-    },
-    {
-      name: n('civil_id'),
-      labelAr: 'رقم البطاقة المدنية',
-      type: 'text',
-      width: 'num',
-      span: 6,
-      required: true,
-      latinDigits: true,
-      showWhen: person,
-      placeholder: '000000000000',
-    },
-    {
-      name: n('entity_civil_no'),
-      labelAr: 'الرقم المدني للجهة',
-      type: 'text',
-      width: 'num',
-      span: 6,
-      required: true,
-      latinDigits: true,
-      showWhen: company,
-    },
-    {
-      name: n('commercial_register'),
-      labelAr: 'رقم السجل التجاري',
-      type: 'text',
-      width: 'reg',
-      span: 6,
-      required: true,
-      latinDigits: true,
-      showWhen: company,
-    },
-  ]
-
-  if (options.representative) {
-    fields.push({
-      name: n('representative'),
-      labelAr: 'الممثل القانوني للشركة',
-      type: 'text',
-      width: 'name',
-      showWhen: company,
-    })
-  }
-
-  return fields
-}
 
 const instrumentRowFields: FieldDef[] = [
   {
@@ -444,9 +363,17 @@ const instrumentRowFields: FieldDef[] = [
 ]
 
 const fields: Record<string, FieldDef> = {
-  respondent_address: {
-    name: 'respondent_address',
+  defendant_address: {
+    name: 'defendant_address',
     labelAr: 'عنوان إعلان المعلن إليه',
+    // a ministry is addressed by its own name, not as «المعلن إليه»
+    labelWhen: [
+      {
+        field: 'defendant_type',
+        equals: ['government'],
+        labelAr: 'عنوان الجهة الحكومية',
+      },
+    ],
     hintAr: 'المنطقة، القطعة، الشارع، القسيمة، الدور. الرقم الآلي للعنوان لا يُذكر.',
     type: 'textarea',
     rows: 4,
@@ -684,24 +611,15 @@ export const claimTemplate: TemplateDef<ClaimValues> = {
       claim.instruments.length > 1 && !reconcile.ok
         ? ` · ⚠ مجموع السندات ${formatMoney(reconcile.total)} لا يساوي المطالبة`
         : ''
-    return `${v.respondent_name || '—'} · ${formatMoney(v.amount)} د.ك. · ${
+    return `${partyName(toCase(v).respondent) || '—'} · ${formatMoney(v.amount)} د.ك. · ${
       claim.instruments.length
     } سند · ${count} مخرجات${mismatch}`
   },
   sections: [
-    {
-      key: 'claimant',
-      titleAr: 'الطالب (المدعي)',
-      fields: partyFields('claimant', 'الطالب'),
-    },
-    {
-      key: 'respondent',
-      titleAr: 'المعلن إليه (المدعى عليه)',
-      fields: [
-        ...partyFields('respondent', 'المعلن إليه', { representative: true }),
-        fields.respondent_address,
-      ],
-    },
+    // the two party sections are the shared ones, identical to every other
+    // pleading type; the service address is a fact about this case
+    partySection(PLAINTIFF),
+    partySection(DEFENDANT, [fields.defendant_address]),
     {
       key: 'debt',
       titleAr: 'الدين وسنده',

@@ -2,36 +2,100 @@ import { z } from 'zod'
 import { weekdayAr } from '@/lib/numerals'
 import {
   COMPANY_FORM_LABEL,
-  PARTY_TYPES,
-  PRIVATE_PARTY_TYPES,
-  partyFields,
-  partyLine,
+  DEFENDANT,
+  PARTY_SIDES,
+  PLAINTIFF,
+  partySection,
   partyShape,
+  personLine,
   readParty,
   validateParty,
-  type Heir,
-  type PartyType,
   type PartyValues,
 } from '@/lib/templates/party'
 import { amountToArabicWords, formatAmount } from '@/lib/tafqeet'
 import type { FieldDef, Placeholders, TemplateDef } from '@/lib/templates/types'
 
 /**
- * The two sides: the word each is called in the form and the pleading, and the
- * shapes it may take. They differ in one respect only — a government body can
- * be sued here but does not sue here, so «جهة حكومية» is offered to the
- * respondent alone.
+ * The party's block exactly as this petition writes it.
+ *
+ * The wording belongs to the document, not to the party: the financial claim
+ * describes the same company in different words, and both are the office's
+ * own. Only the data and the rules are shared.
  */
-export const PLAINTIFF = {
-  prefix: 'plaintiff',
-  labelAr: 'المدعي',
-  types: PRIVATE_PARTY_TYPES,
-} as const
-export const DEFENDANT = {
-  prefix: 'defendant',
-  labelAr: 'المدعى عليه',
-  types: PARTY_TYPES as readonly PartyType[],
-} as const
+function partyLine(party: PartyValues): string {
+  switch (party.type) {
+    case 'natural':
+      return personLine(party.full_name, party.civil_id, party.nationality)
+
+    case 'several': {
+      // «1- فلان … 2- فلان …» — each party in their own right, numbered
+      return party.persons
+        .filter((person) => person.name.trim())
+        .map(
+          (person, i) =>
+            `${i + 1}- ${personLine(person.name, person.civil_id, person.nationality)}`,
+        )
+        .join('\n')
+    }
+
+    case 'heirs': {
+      const heirs = party.heirs
+        .filter((h) => h.name.trim())
+        .map((h, i) => `${i + 1}- ${personLine(h.name, h.civil_id, h.nationality)}`)
+        .join('\n')
+      const head = `ورثة المرحوم/ ${party.deceased_name.trim()}، وهم كل من:`
+      return heirs ? `${head}\n${heirs}` : head
+    }
+
+    case 'company':
+      return [
+        party.company_name.trim(),
+        COMPANY_FORM_LABEL.get(party.company_form) ?? '',
+        party.company_register ? `سجل تجاري رقم (${party.company_register})` : '',
+        party.company_civil_no ? `رقم الجهة المدني (${party.company_civil_no})` : '',
+      ]
+        .filter(Boolean)
+        .join(' – ')
+
+    case 'government':
+      // a ministry or authority is named and nothing else: it carries no civil
+      // number and no commercial register to cite
+      return party.government_name.trim()
+
+    case 'licence': {
+      /*
+       * «صيدلية راما لصاحبها علي محمود العريان – كويتي الجنسية – بطاقة مدنية
+       *  رقم (…) – سجل تجاري رقم (…) – رقم الجهة المدني (…)»
+       *
+       * The owner follows the establishment immediately, and the licence's own
+       * numbers close the line — so the reader gets the establishment, then
+       * the person answerable for it, then the registrations.
+       *
+       * «لصاحبها» agrees with a feminine establishment (صيدلية، مؤسسة، شركة),
+       * which is what this office's pleadings use.
+       */
+      const owner = personLine(
+        party.owner_name,
+        party.owner_civil_id,
+        party.owner_nationality,
+      )
+      const establishment = party.establishment_name.trim()
+      const head = owner ? `${establishment} لصاحبها ${owner}` : establishment
+
+      return [
+        head,
+        party.licence_register ? `سجل تجاري رقم (${party.licence_register})` : '',
+        party.licence_civil_no ? `رقم الجهة المدني (${party.licence_civil_no})` : '',
+      ]
+        .filter(Boolean)
+        .join(' – ')
+    }
+
+    default:
+      // submitted before the party types existed: the client typed the block
+      return party.name
+  }
+}
 
 const DATE_RE = /^\d{1,2}\/\d{1,2}\/\d{4}$/
 
@@ -60,10 +124,12 @@ export const evictionSchema = z
     plaintiff_type: partyShape.type,
     plaintiff_name: partyShape.name,
     plaintiff_full_name: partyShape.full_name,
+    plaintiff_gender: partyShape.gender,
     plaintiff_civil_id: partyShape.civil_id,
     plaintiff_nationality: partyShape.nationality,
     plaintiff_deceased_name: partyShape.deceased_name,
     plaintiff_heirs: partyShape.heirs,
+    plaintiff_persons: partyShape.persons,
     plaintiff_company_name: partyShape.company_name,
     plaintiff_company_form: partyShape.company_form,
     plaintiff_company_register: partyShape.company_register,
@@ -78,10 +144,12 @@ export const evictionSchema = z
     defendant_type: partyShape.type,
     defendant_name: partyShape.name,
     defendant_full_name: partyShape.full_name,
+    defendant_gender: partyShape.gender,
     defendant_civil_id: partyShape.civil_id,
     defendant_nationality: partyShape.nationality,
     defendant_deceased_name: partyShape.deceased_name,
     defendant_heirs: partyShape.heirs,
+    defendant_persons: partyShape.persons,
     defendant_company_name: partyShape.company_name,
     defendant_company_form: partyShape.company_form,
     defendant_company_register: partyShape.company_register,
@@ -120,7 +188,7 @@ export const evictionSchema = z
     }
 
     // both sides, same rules, one definition
-    for (const side of [PLAINTIFF, DEFENDANT]) {
+    for (const side of PARTY_SIDES) {
       const party = readParty(v, side.prefix)
       // the form offers each side only its own shapes; a request that arrives
       // with another one was not filled in on these screens
@@ -164,10 +232,15 @@ export const evictionDefaults: EvictionValues = {
   plaintiff_type: 'natural',
   plaintiff_name: '',
   plaintiff_full_name: '',
+  plaintiff_gender: '',
   plaintiff_civil_id: '',
   plaintiff_nationality: 'KW',
   plaintiff_deceased_name: '',
   plaintiff_heirs: [{ name: '', civil_id: '', nationality: 'KW' }],
+  plaintiff_persons: [
+    { name: '', civil_id: '', nationality: 'KW' },
+    { name: '', civil_id: '', nationality: 'KW' },
+  ],
   plaintiff_company_name: '',
   plaintiff_company_form: '',
   plaintiff_company_register: '',
@@ -182,10 +255,15 @@ export const evictionDefaults: EvictionValues = {
   defendant_type: 'natural',
   defendant_name: '',
   defendant_full_name: '',
+  defendant_gender: '',
   defendant_civil_id: '',
   defendant_nationality: 'KW',
   defendant_deceased_name: '',
   defendant_heirs: [{ name: '', civil_id: '', nationality: 'KW' }],
+  defendant_persons: [
+    { name: '', civil_id: '', nationality: 'KW' },
+    { name: '', civil_id: '', nationality: 'KW' },
+  ],
   defendant_company_name: '',
   defendant_company_form: '',
   defendant_company_register: '',
@@ -461,19 +539,10 @@ export const evictionTemplate: TemplateDef<EvictionValues> = {
       v.arrears_from_month
     }–${v.arrears_to_month}/${v.arrears_year}`,
   sections: [
-    {
-      key: 'plaintiff',
-      titleAr: PLAINTIFF.labelAr,
-      fields: partyFields(PLAINTIFF.prefix, PLAINTIFF.labelAr, PLAINTIFF.types),
-    },
-    {
-      key: 'defendant',
-      titleAr: DEFENDANT.labelAr,
-      fields: [
-        ...partyFields(DEFENDANT.prefix, DEFENDANT.labelAr, DEFENDANT.types),
-        fields.defendant_address,
-      ],
-    },
+    // the two party sections are the shared ones, untouched; the service
+    // address is a fact about this case, not about the party
+    partySection(PLAINTIFF),
+    partySection(DEFENDANT, [fields.defendant_address]),
     {
       key: 'premises',
       titleAr: 'العين المؤجرة وعقد الإيجار',

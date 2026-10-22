@@ -7,7 +7,7 @@
  *
  *   npx tsx scripts/claim-check.ts
  */
-import { blankCase, blankParty, type ClaimCase } from '@/lib/claim/case'
+import type { ClaimCase } from '@/lib/claim/case'
 import {
   composeDemand,
   composeExhibits,
@@ -40,6 +40,7 @@ import {
   type Instrument,
 } from '@/lib/claim/instruments'
 import { amountInWords, formatMoney, moneyPhrase } from '@/lib/claim/money'
+import type { PartyValues } from '@/lib/templates/party'
 import { allFields, formDataToValues, templates } from '@/lib/templates'
 import { claimDefaults, claimTemplate } from '@/lib/templates/claim'
 import { fieldString, isFieldVisible } from '@/lib/templates/visibility'
@@ -53,6 +54,53 @@ function check(label: string, actual: unknown, expected: unknown) {
   console.log(
     `${ok ? 'PASS' : 'FAIL'}  ${label}${ok ? '' : `\n      got      ${actual}\n      expected ${expected}`}`,
   )
+}
+
+/** a blank party in the shared shape, with only what a fixture states filled */
+function party(over: Partial<PartyValues>): PartyValues {
+  return {
+    name: '',
+    full_name: '',
+    gender: '',
+    civil_id: '',
+    nationality: '',
+    persons: [],
+    deceased_name: '',
+    heirs: [],
+    company_name: '',
+    company_form: '',
+    company_register: '',
+    company_civil_no: '',
+    government_name: '',
+    establishment_name: '',
+    owner_name: '',
+    owner_civil_id: '',
+    owner_nationality: '',
+    licence_register: '',
+    licence_civil_no: '',
+    ...over,
+  }
+}
+
+function blankClaim(): ClaimCase {
+  return {
+    claimant: party({}),
+    respondent: party({}),
+    respondentAddress: '',
+    amount: 0,
+    relationship: 'commercial',
+    relationshipOther: '',
+    instruments: [],
+    legalInterest: true,
+    hasContract: false,
+    courtName: '',
+    demandPostedOn: '',
+    orderNumber: '',
+    orderYear: '',
+    orderRefusedOn: '',
+    claimantAddress: '',
+    claimantEmail: '',
+  }
 }
 
 const instrument = (over: Partial<Instrument>): Instrument => ({
@@ -311,19 +359,21 @@ check('with the gap named', short.difference, -250)
 console.log('\n--- صحيفة الدعوى, against examples/build3_invoice.json')
 
 const invoiceCase: ClaimCase = {
-  ...blankCase(),
-  claimant: {
-    ...blankParty('company'),
-    name: 'شركة المثال التجارية شركة الشخص الواحد',
-    entityCivilNo: '0000000',
-    commercialRegister: '000000',
-  },
-  respondent: {
-    ...blankParty('man'),
-    name: 'فلان عبد الله الفلاني',
+  ...blankClaim(),
+  claimant: party({
+    type: 'company',
+    company_name: 'شركة المثال التجارية',
+    company_form: 'single_person',
+    company_civil_no: '0000000',
+    company_register: '000000',
+  }),
+  respondent: party({
+    type: 'natural',
+    full_name: 'فلان عبد الله الفلاني',
+    gender: 'male',
     nationality: 'KW',
-    civilId: '000000000000',
-  },
+    civil_id: '000000000000',
+  }),
   respondentAddress:
     'منطقة المثال – قطعة (1) – شارع (10) – منزل رقم (5) – الدور الأرضي',
   amount: 882.511,
@@ -512,7 +562,7 @@ check(
   'a company respondent needs its deed and its licence',
   composeExhibits({
     ...chequeCase,
-    respondent: { ...blankParty('company'), name: 'شركة المدين' },
+    respondent: party({ type: 'company', company_name: 'شركة المدين' }),
   })
     .rows.map((r) => r.description)
     .join(' | '),
@@ -531,12 +581,13 @@ check(
 console.log('\n--- a woman owing a company, to see every word move')
 const feminine = composeLawsuit({
   ...invoiceCase,
-  respondent: {
-    ...blankParty('woman'),
-    name: 'وسمية سعد فهاد العجمي',
+  respondent: party({
+    type: 'natural',
+    full_name: 'وسمية سعد فهاد العجمي',
+    gender: 'female',
     nationality: 'KW',
-    civilId: '280110601156',
-  },
+    civil_id: '280110601156',
+  }),
 })
 check(
   'the respondent line agrees',
@@ -593,12 +644,17 @@ console.log('\n--- the request form')
 
   const filled = {
     ...claimDefaults,
-    claimant_name: 'شركة المثال التجارية شركة الشخص الواحد',
-    claimant_entity_civil_no: '0000000',
-    claimant_commercial_register: '000000',
-    respondent_name: 'فلان عبد الله الفلاني',
-    respondent_civil_id: '000000000000',
-    respondent_address: 'منطقة المثال – قطعة (1) – شارع (10)',
+    plaintiff_type: 'company',
+    plaintiff_company_name: 'شركة المثال التجارية',
+    plaintiff_company_form: 'single_person',
+    plaintiff_company_civil_no: '0000000',
+    plaintiff_company_register: '000000',
+    defendant_type: 'natural',
+    defendant_full_name: 'فلان عبد الله الفلاني',
+    defendant_gender: 'male',
+    defendant_nationality: 'KW',
+    defendant_civil_id: '000000000000',
+    defendant_address: 'منطقة المثال – قطعة (1) – شارع (10)',
     amount: 7250,
     instruments: [
       {
@@ -687,18 +743,28 @@ console.log('\n--- the request form')
 
   check(
     'a company needs its commercial register',
-    errorPath({ claimant_commercial_register: '' }),
-    'claimant_commercial_register',
+    errorPath({ plaintiff_company_register: '' }),
+    'plaintiff_company_register',
   )
   check(
     'a person needs twelve digits',
-    errorPath({ respondent_civil_id: '123' }),
-    'respondent_civil_id',
+    errorPath({ defendant_civil_id: '123' }),
+    'defendant_civil_id',
+  )
+  check(
+    'a natural person needs a gender, so the Arabic can agree',
+    errorPath({ defendant_gender: '' }),
+    'defendant_gender',
   )
   check(
     'the address is required',
-    errorPath({ respondent_address: '' }),
-    'respondent_address',
+    errorPath({ defendant_address: '' }),
+    'defendant_address',
+  )
+  check(
+    'جهة حكومية is refused on the claimant\u2019s side here too',
+    errorPath({ plaintiff_type: 'government', plaintiff_government_name: 'وزارة' }),
+    'plaintiff_type',
   )
   check(
     'a claim needs at least one instrument',
