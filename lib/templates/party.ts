@@ -21,7 +21,6 @@ import type { FieldDef, SectionDef } from '@/lib/templates/types'
 
 export const PARTY_TYPES = [
   'natural',
-  'several',
   'heirs',
   'company',
   'licence',
@@ -131,9 +130,6 @@ export const partyShape = {
   civil_id: z.string().trim().max(20).default(''),
   nationality: z.string().trim().max(40).default(''),
 
-  /** أكثر من طرف: each person in their own right */
-  persons: z.array(personSchema).max(40).default([]),
-
   deceased_name: z.string().trim().max(300).default(''),
   heirs: z.array(heirSchema).max(40).default([]),
 
@@ -161,7 +157,6 @@ export type PartyValues = {
   gender: string
   civil_id: string
   nationality: string
-  persons: Person[]
   deceased_name: string
   heirs: Person[]
   company_name: string
@@ -217,7 +212,6 @@ export function readParty(
     return Array.isArray(value) ? (value as Person[]) : []
   }
   party.heirs = rows('heirs')
-  party.persons = rows('persons')
   return party
 }
 
@@ -237,7 +231,6 @@ export function partyForm(party: PartyValues): 'm' | 'f' | 'pl' {
     case 'government':
       return 'f'
     case 'heirs':
-    case 'several':
       return 'pl'
     case 'natural':
       return party.gender === 'female' ? 'f' : 'm'
@@ -295,11 +288,6 @@ export function validateParty(
       )
       need(CIVIL_ID_RE.test(party.civil_id), at('civil_id'), CIVIL_ID_MSG)
       need(filled(party.nationality, 2), at('nationality'), 'الجنسية مطلوبة')
-      break
-
-    case 'several':
-      checkPersons(party.persons, 'persons', 'طرف')
-      need(party.persons.length > 1, at('persons'), 'أضف طرفاً ثانياً على الأقل')
       break
 
     case 'heirs':
@@ -451,7 +439,6 @@ export function partyFields(
       options: (
         [
           { value: 'natural', labelAr: 'شخص طبيعي' },
-          { value: 'several', labelAr: 'أكثر من طرف' },
           { value: 'heirs', labelAr: 'ورثة' },
           { value: 'company', labelAr: 'شركة' },
           { value: 'licence', labelAr: 'رخصة فردية' },
@@ -547,20 +534,6 @@ export function partyFields(
       rowLabelAr: 'وريث',
       addLabelAr: 'إضافة وريث',
       minRows: 1,
-      rowFields: personRowFields,
-    },
-
-    /* --- أكثر من طرف --- */
-    {
-      name: n('persons'),
-      labelAr: `بيانات ${labelAr}`,
-      hintAr: 'كل طرف في سطر مستقل في الصحيفة، مرقّماً بالترتيب المدخل هنا.',
-      type: 'rows',
-      required: true,
-      showWhen: only('several'),
-      rowLabelAr: 'طرف',
-      addLabelAr: 'إضافة طرف',
-      minRows: 2,
       rowFields: personRowFields,
     },
 

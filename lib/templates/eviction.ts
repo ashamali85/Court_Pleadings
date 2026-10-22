@@ -27,17 +27,6 @@ function partyLine(party: PartyValues): string {
     case 'natural':
       return personLine(party.full_name, party.civil_id, party.nationality)
 
-    case 'several': {
-      // «1- فلان … 2- فلان …» — each party in their own right, numbered
-      return party.persons
-        .filter((person) => person.name.trim())
-        .map(
-          (person, i) =>
-            `${i + 1}- ${personLine(person.name, person.civil_id, person.nationality)}`,
-        )
-        .join('\n')
-    }
-
     case 'heirs': {
       const heirs = party.heirs
         .filter((h) => h.name.trim())
@@ -129,7 +118,6 @@ export const evictionSchema = z
     plaintiff_nationality: partyShape.nationality,
     plaintiff_deceased_name: partyShape.deceased_name,
     plaintiff_heirs: partyShape.heirs,
-    plaintiff_persons: partyShape.persons,
     plaintiff_company_name: partyShape.company_name,
     plaintiff_company_form: partyShape.company_form,
     plaintiff_company_register: partyShape.company_register,
@@ -149,7 +137,6 @@ export const evictionSchema = z
     defendant_nationality: partyShape.nationality,
     defendant_deceased_name: partyShape.deceased_name,
     defendant_heirs: partyShape.heirs,
-    defendant_persons: partyShape.persons,
     defendant_company_name: partyShape.company_name,
     defendant_company_form: partyShape.company_form,
     defendant_company_register: partyShape.company_register,
@@ -237,10 +224,6 @@ export const evictionDefaults: EvictionValues = {
   plaintiff_nationality: 'KW',
   plaintiff_deceased_name: '',
   plaintiff_heirs: [{ name: '', civil_id: '', nationality: 'KW' }],
-  plaintiff_persons: [
-    { name: '', civil_id: '', nationality: 'KW' },
-    { name: '', civil_id: '', nationality: 'KW' },
-  ],
   plaintiff_company_name: '',
   plaintiff_company_form: '',
   plaintiff_company_register: '',
@@ -260,10 +243,6 @@ export const evictionDefaults: EvictionValues = {
   defendant_nationality: 'KW',
   defendant_deceased_name: '',
   defendant_heirs: [{ name: '', civil_id: '', nationality: 'KW' }],
-  defendant_persons: [
-    { name: '', civil_id: '', nationality: 'KW' },
-    { name: '', civil_id: '', nationality: 'KW' },
-  ],
   defendant_company_name: '',
   defendant_company_form: '',
   defendant_company_register: '',

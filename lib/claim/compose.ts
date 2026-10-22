@@ -86,15 +86,6 @@ export function partyLine(
     case 'natural':
       return person(party.full_name, party.civil_id, party.nationality, form)
 
-    case 'several':
-      return party.persons
-        .filter((p) => p.name.trim())
-        .map(
-          (p, i) =>
-            `${i + 1}- ${person(p.name, p.civil_id, p.nationality, 'm', false)}`,
-        )
-        .join('\n')
-
     case 'heirs': {
       const heirs = party.heirs
         .filter((h) => h.name.trim())
@@ -164,11 +155,6 @@ export function partyName(party: PartyValues): string {
   switch (party.type) {
     case 'natural':
       return party.full_name.trim()
-    case 'several':
-      return party.persons
-        .filter((p) => p.name.trim())
-        .map((p) => p.name.trim())
-        .join(' و')
     case 'heirs':
       return `ورثة المرحوم/ ${party.deceased_name.trim()}`
     case 'company':

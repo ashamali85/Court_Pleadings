@@ -64,7 +64,6 @@ function party(over: Partial<PartyValues>): PartyValues {
     gender: '',
     civil_id: '',
     nationality: '',
-    persons: [],
     deceased_name: '',
     heirs: [],
     company_name: '',
